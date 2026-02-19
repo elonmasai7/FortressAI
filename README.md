@@ -1,10 +1,87 @@
 # FortressAI
 
-This repository includes a full-stack scaffold plus a rebuilt frontend pitch-deck dashboard for FortressAI.
+FortressAI is a full-stack cybersecurity demo platform for hackathon/pitch scenarios. It combines:
 
-## Frontend (Hackathon UI)
+- A **Next.js 14 dashboard frontend** (`frontend/`) with a live simulation UI
+- A **FastAPI backend** (`backend/`) with agent-style endpoints
+- Optional infrastructure via Docker Compose: **Postgres (Timescale)**, **Redis**, **Celery**, **WireGuard**, **Hyperledger peer**
 
-The requested UI-only implementation lives in `frontend/` and runs standalone with mocked data and simulated realtime events.
+The primary demo experience is:
+
+- `/` -> multi-slide Fortress deck
+- `/demo` -> focused live simulation (Attack -> Response -> Solution -> Training handbook)
+
+## What This Repo Contains
+
+- **Frontend demo UX** for SOC-style incident simulation
+- **Backend APIs** for recon/simulate/respond/log phases
+- **WebSocket status stream** for live dashboard updates
+- **Mock fallbacks** so frontend can still run when backend is offline
+- **Docker Compose stack** for an end-to-end local environment
+
+## Architecture
+
+```text
+frontend (Next.js 14)
+  ├─ /            -> FortressDeck slides
+  ├─ /demo        -> live 30s simulation screen
+  ├─ /api/*       -> mock Next API routes for UI fallback
+  └─ ws client    -> ws://<backend>/ws/status
+
+backend (FastAPI)
+  ├─ POST /scan      (Recon Agent)
+  ├─ POST /simulate  (Simulate Agent)
+  ├─ POST /tunnel    (Respond Agent)
+  ├─ POST /log       (Log Agent)
+  ├─ GET  /status    (live metrics snapshot)
+  ├─ GET  /demo      (scripted 30s-ish flow)
+  └─ WS   /ws/status (1s push stream)
+
+infra (docker-compose)
+  ├─ postgres/timescale
+  ├─ redis
+  ├─ celery worker
+  ├─ wireguard
+  └─ hyperledger peer
+```
+
+## Repository Layout
+
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── routers/api.py
+│   │   ├── ws/socket.py
+│   │   ├── services/
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   └── tasks.py
+│   ├── scripts/bootstrap.sh
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/
+│   ├── app/
+│   │   ├── page.tsx
+│   │   ├── demo/page.tsx
+│   │   └── api/
+│   ├── components/
+│   ├── hooks/
+│   ├── lib/
+│   └── README.md
+├── infra/
+├── seed/
+├── scripts/
+├── docker-compose.yml
+└── README.md
+```
+
+## Quick Start
+
+### Option A: Frontend only (fastest)
+
+Use this when you only need UI/demo behavior.
 
 ```bash
 cd frontend
@@ -14,7 +91,228 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Notes
+Notes:
 
-- Backend logic, AI models, VPN wiring, and database execution are intentionally mocked for UI demonstration.
-- Full frontend implementation details and directory tree are documented in `frontend/README.md`.
+- UI will try backend at `http://localhost:8000` by default.
+- If backend is unavailable, the frontend uses local mock behavior for simulation.
+
+### Option B: Full stack with Docker Compose
+
+Use this for full API + DB + worker + infra emulation.
+
+```bash
+docker compose up --build
+```
+
+Services and ports:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Postgres: `localhost:5432`
+- Redis: `localhost:6379`
+- WireGuard UDP: `localhost:51820`
+- Hyperledger peer: `localhost:7051`
+
+## Local Development Commands
+
+### Root
+
+```bash
+npm run demo
+```
+
+Runs frontend demo script from root package config.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build
+npm test
+npm run lint
+```
+
+### Backend (without Docker)
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+If running backend outside Docker, set environment variables (notably `DATABASE_URL`, `REDIS_URL`) to reachable local services.
+
+## API Reference (Backend)
+
+Base URL: `http://localhost:8000`
+
+### `POST /scan`
+
+Recon scan (nmap-based with fallback seed findings).
+
+Request:
+
+```json
+{
+  "target": "hkma.gov.hk",
+  "ports": "1-10000"
+}
+```
+
+### `POST /simulate`
+
+Phishing simulation scoring (keyword/BERT-style heuristic output).
+
+Request:
+
+```json
+{
+  "email_text": "HKMA urgent compliance alert. Verify account and wire payment."
+}
+```
+
+### `POST /tunnel`
+
+Tunnel deployment flow (real or simulated WireGuard depending on env/runtime).
+
+Request:
+
+```json
+{
+  "endpoint": "hk-relay-01.cyberport.hk"
+}
+```
+
+### `POST /log`
+
+Immutable logging step (Hyperledger-aware simulated hash output).
+
+Request:
+
+```json
+{
+  "threat_id": "0xabc",
+  "compliance": "HKMA_2026",
+  "payload": "demo"
+}
+```
+
+### `GET /status`
+
+Returns current metrics snapshot for dashboard polling/streaming.
+
+### `GET /demo`
+
+Runs a scripted multi-step demo timeline and returns a combined result.
+
+### `GET /qr`
+
+Returns a PNG QR that points to the frontend demo URL.
+
+### `WS /ws/status`
+
+Streams `metrics_store.snapshot()` every second.
+
+## Frontend Routes
+
+- `/` -> main Fortress deck (`frontend/components/FortressDeck.tsx`)
+- `/demo` -> live simulation dashboard (`frontend/app/demo/page.tsx`)
+
+Next.js mock API routes (frontend-side):
+
+- `GET /api/scan`
+- `POST /api/tunnel`
+- `GET /api/logs`
+
+These are useful for local UI fallback behavior.
+
+## Environment Variables
+
+### Frontend
+
+- `NEXT_PUBLIC_API_BASE` (default: `http://localhost:8000`)
+
+### Backend
+
+- `REDIS_URL` (default: `redis://redis:6379/0`)
+- `DATABASE_URL` (default: `postgresql+psycopg://fortress:fortress@postgres:5432/fortressai`)
+- `DEMO_TARGET` (default: `hkma.gov.hk`)
+- `WG_CONFIG_PATH` (default: `/etc/wireguard/fortressai.conf`)
+- `ENABLE_REAL_WG` (`true`/`false`)
+- `ENABLE_REAL_FABRIC` (`true`/`false`)
+- `FABRIC_PEER_ADDRESS` (default: `hyperledger:7051`)
+
+## Data and Scripts
+
+- Seed data:
+  - `seed/hk_targets.json`
+  - `seed/phishing_templates.json`
+- Scripts:
+  - `scripts/generate_qr.sh` -> saves backend QR to `frontend/public/demo-qr.png`
+  - `scripts/demo_video_script.md` -> 30s presentation narrative
+
+## Demo Flow (Current `/demo`)
+
+The current live demo UI is focused on:
+
+1. **Attack** phase (red)
+2. **Response** phase (yellow/green transition)
+3. **Solution** phase (green)
+4. **Training handbook** panel shown after solution state
+
+The UI auto-advances on a 30-second timeline and can be reset via **Reset Demo**.
+
+## Troubleshooting
+
+### Frontend cannot reach backend
+
+- Verify backend is running on `http://localhost:8000`
+- Set explicit base URL:
+
+```bash
+cd frontend
+NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
+```
+
+### WebSocket not connecting
+
+- Confirm backend route `ws://localhost:8000/ws/status`
+- Check proxy/network restrictions in your environment
+- UI should still render using fallback simulation when disconnected
+
+### WireGuard operations fail in backend
+
+- This can happen outside privileged/container environments
+- Backend falls back to simulated deployment timings/results when real WG commands fail
+
+### Nmap scan issues
+
+- Ensure `nmap` exists (Docker backend image installs it)
+- If scanning fails, backend uses seed fallback findings
+
+### Docker Compose health issues
+
+- Inspect service logs:
+
+```bash
+docker compose logs -f backend frontend postgres redis celery wireguard hyperledger
+```
+
+- Rebuild clean:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+## Security and Demo Disclaimer
+
+This repository is a **demo/simulation environment**. It is not a hardened production security platform as-is. Several behaviors intentionally degrade to mock/fallback mode to keep demos resilient in constrained environments.
+
+## Additional Docs
+
+- Frontend-specific details: `frontend/README.md`
