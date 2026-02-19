@@ -23,6 +23,13 @@ npm run dev
 
 App runs on `http://localhost:3000`.
 
+By default the UI talks to backend at `http://localhost:8000`.
+Override with:
+
+```bash
+NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
+```
+
 ## Test
 
 ```bash
@@ -34,6 +41,7 @@ npm test
 - 12 full-screen slide sections with sidebar/header navigation
 - Keyboard navigation via `ArrowUp` / `ArrowDown`
 - Mock realtime WebSocket-like stream for metrics/log updates
+- Live backend integration via `ws://localhost:8000/ws/status` and `/scan` + `/tunnel` calls, with mock fallback if backend is offline
 - Mock API routes: `/api/scan`, `/api/tunnel`, `/api/logs`
 - Live-like charts, threat map, React Flow agent pipeline, timeline, pricing, Gantt, gauges/progress
 - QR code generation for demo links

@@ -35,7 +35,7 @@ const slides: SlideMeta[] = [
 ];
 
 export function FortressDeck() {
-  const { metric, logs, statusTone } = useMockRealtime();
+  const { metric, statusTone, connected } = useMockRealtime();
   const [activeSlide, setActiveSlide] = useState<SlideMeta['id']>('title');
   const [highContrast, setHighContrast] = useState(false);
   const [lightMode, setLightMode] = useState(false);
@@ -126,26 +126,15 @@ export function FortressDeck() {
         </div>
       </header>
 
-      <aside className="fixed bottom-6 left-4 z-40 hidden max-h-[70vh] w-44 overflow-auto rounded-xl border border-slate-800 bg-black/70 p-2 backdrop-blur md:block">
-        {slides.map((slide, index) => (
-          <button
-            key={slide.id}
-            type="button"
-            onClick={() => document.getElementById(slide.id)?.scrollIntoView({ behavior: 'smooth' })}
-            className={`flex w-full items-center rounded px-2 py-2 text-left text-xs ${activeSlide === slide.id ? 'bg-fortress-green/20 text-fortress-green' : 'text-slate-300'}`}
-          >
-            <span className="mr-2 text-[10px] text-fortress-gold">{index + 1}</span>
-            {slide.title}
-          </button>
-        ))}
-      </aside>
-
       <main ref={containerRef} className="relative snap-y snap-mandatory overflow-y-auto">
         {loading && <LoadingOverlay label="Booting FortressAI visual simulation..." />}
 
         <div className="fixed right-4 top-20 z-40 rounded-xl border border-fortress-green/40 bg-black/70 p-3 backdrop-blur">
           <StatusPill status={metric?.status ?? 'ALERT'} />
-          <p className="mt-2 text-xs text-slate-300">Threats/min: {metric?.threatsPerMinute ?? '--'}</p>
+          <p className={`mt-2 text-[10px] ${connected ? 'text-fortress-green' : 'text-fortress-gold'}`}>
+            Feed: {connected ? 'Backend WebSocket' : 'Mock Fallback'}
+          </p>
+          <p className="mt-1 text-xs text-slate-300">Threats/min: {metric?.threatsPerMinute ?? '--'}</p>
           <p className="text-xs text-slate-300">Tunnel latency: {metric?.tunnelLatencyMs ?? '--'}ms</p>
           <p className={`text-xs font-semibold ${statusTone}`}>OWASP detect: {metric?.owaspDetection ?? '--'}%</p>
         </div>
@@ -165,14 +154,7 @@ export function FortressDeck() {
       </main>
 
       <footer className="border-t border-slate-800 bg-black/80 px-4 py-4 text-center text-xs text-slate-400">
-        Fortress Team | Hong Kong Hackathon 2026 | Mock HKMA Log View (Read-only)
-        <div className="mx-auto mt-2 max-w-4xl rounded border border-slate-800 bg-black/60 p-2 text-left text-[10px] text-slate-300">
-          {logs.slice(0, 3).map((log) => (
-            <p key={log.id}>
-              [{new Date(log.timestamp).toLocaleTimeString('en-HK', { hour12: false })}] {log.source} {log.severity}: {log.message}
-            </p>
-          ))}
-        </div>
+        Fortress Team | Hong Kong Hackathon 2026
       </footer>
     </div>
   );
