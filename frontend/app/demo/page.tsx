@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, Clock3, ShieldCheck, ShieldX, TerminalSquare } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { fetchJson, getApiBase, getWsBase } from '@/lib/backend';
+import { AlertTriangle, CheckCircle2, ShieldX, TerminalSquare } from 'lucide-react';
+import { fetchJson, getWsBase } from '@/lib/backend';
 
 type PhaseId = 'recon' | 'simulate' | 'respond' | 'log';
 
@@ -29,21 +28,12 @@ type BackendStatusPayload = {
   hyperledger_tx?: string;
 };
 
-type LogEntry = {
-  id: string;
-  timestamp: string;
-  source: string;
-  severity: 'INFO' | 'WARN' | 'CRITICAL' | 'SUCCESS';
-  message: string;
-};
-
 const TOTAL_SECONDS = 30;
 
 const PHASES: DemoPhase[] = [
-  { id: 'recon', label: 'RECON AGENT', range: [0, 7], tone: 'red' },
-  { id: 'simulate', label: 'SIMULATE AGENT', range: [8, 15], tone: 'orange' },
-  { id: 'respond', label: 'RESPOND AGENT', range: [16, 25], tone: 'yellow' },
-  { id: 'log', label: 'LOG AGENT', range: [26, 30], tone: 'green' },
+  { id: 'recon', label: 'ATTACK', range: [0, 10], tone: 'red' },
+  { id: 'respond', label: 'RESPONSE', range: [11, 22], tone: 'yellow' },
+  { id: 'log', label: 'SOLUTION', range: [23, 30], tone: 'green' },
 ];
 
 const toneClasses = {
@@ -112,22 +102,11 @@ function getPhase(second: number): DemoPhase {
   return PHASES.find((p) => second >= p.range[0] && second <= p.range[1]) || PHASES[PHASES.length - 1];
 }
 
-function mkLog(source: string, severity: LogEntry['severity'], message: string): LogEntry {
-  return {
-    id: `${Date.now()}-${Math.random()}`,
-    timestamp: new Date().toLocaleTimeString('en-HK', { hour12: false }),
-    source,
-    severity,
-    message,
-  };
-}
-
 export default function DemoPage() {
   const [second, setSecond] = useState(0);
   const [running, setRunning] = useState(true);
   const [connected, setConnected] = useState(false);
   const [terminal, setTerminal] = useState<string[]>([]);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [incidents] = useState(15877);
   const [trafficData, setTrafficData] = useState<Array<{ t: string; normal: number; attack: number; blocked: number }>>(
     Array.from({ length: 24 }, (_, i) => ({ t: `${i}`, normal: 80, attack: 80, blocked: 0 }))
@@ -181,7 +160,6 @@ export default function DemoPage() {
     setSecond(0);
     setRunning(true);
     setTerminal([]);
-    setLogs([mkLog('SYSTEM', 'INFO', 'Demo reset. Awaiting QR judge scan.')]);
     setTrafficData(Array.from({ length: 24 }, (_, i) => ({ t: `${i}`, normal: 80, attack: 80, blocked: 0 })));
     setBertConfidence(0.12);
     setTunnelLatency(999);
@@ -190,10 +168,6 @@ export default function DemoPage() {
     setHyperledgerTx('pending...');
     await runRestAction('/reset', { method: 'POST' });
   }, [runRestAction]);
-
-  useEffect(() => {
-    setLogs([mkLog('SYSTEM', 'INFO', 'QR session started: FortressAI Live Demo')]);
-  }, []);
 
   useEffect(() => {
     const wsUrl = `${getWsBase()}/ws/status`;
@@ -244,27 +218,20 @@ export default function DemoPage() {
   useEffect(() => {
     if (phase.id === 'recon') {
       addTerminalBlock(reconTerminal);
-      setLogs((current) => [mkLog('Recon Agent', 'CRITICAL', 'RDP Exposed: hkma.gov.hk:3389'), ...current].slice(0, 12));
       runRestAction('/scan', { method: 'POST' });
-    }
-    if (phase.id === 'simulate') {
-      addTerminalBlock(simulateTerminal);
-      setLogs((current) => [mkLog('Simulate Agent', 'WARN', '95% phishing-template match detected'), ...current].slice(0, 12));
-      setBertConfidence(0.95);
-      runRestAction('/simulate', { method: 'POST' });
     }
     if (phase.id === 'respond') {
       addTerminalBlock(respondTerminal);
-      setLogs((current) => [mkLog('Respond Agent', 'INFO', 'ExpressVPN tunnel deployment started'), ...current].slice(0, 12));
+      setBertConfidence(0.95);
       setTunnelLatency(50);
       setTunnelActive(true);
       setKillSwitch(true);
+      runRestAction('/simulate', { method: 'POST' });
       runRestAction('/tunnel', { method: 'POST' });
     }
     if (phase.id === 'log') {
       addTerminalBlock(logTerminal);
       setHyperledgerTx('0xabc123...logged');
-      setLogs((current) => [mkLog('Log Agent', 'SUCCESS', 'Immutable Hyperledger evidence committed'), ...current].slice(0, 12));
       runRestAction('/logs', { method: 'GET' });
     }
   }, [phase.id, addTerminalBlock, runRestAction]);
@@ -272,7 +239,7 @@ export default function DemoPage() {
   useEffect(() => {
     if (connected) return;
     const timer = setInterval(() => {
-      const attackValue = phase.id === 'recon' ? 220 + Math.random() * 80 : phase.id === 'simulate' ? 500 + Math.random() * 55 : phase.id === 'respond' ? 120 + Math.random() * 45 : 72 + Math.random() * 20;
+      const attackValue = phase.id === 'recon' ? 400 + Math.random() * 120 : phase.id === 'respond' ? 120 + Math.random() * 45 : 72 + Math.random() * 20;
       const blockedValue = phase.id === 'respond' || phase.id === 'log' ? Math.min(500, attackValue - 30) : 0;
       setTrafficData((current) => [
         ...current.slice(1),
@@ -289,7 +256,7 @@ export default function DemoPage() {
   }, [connected, phase.id]);
 
   const progress = Math.round((second / TOTAL_SECONDS) * 100);
-  const threatLevel = phase.id === 'recon' ? 'CRITICAL' : phase.id === 'simulate' ? 'HIGH' : phase.id === 'respond' ? (safeIn3s ? 'STABILIZING' : 'HIGH') : 'SAFE';
+  const threatLevel = phase.id === 'recon' ? 'CRITICAL' : phase.id === 'respond' ? (safeIn3s ? 'STABILIZING' : 'HIGH') : 'SAFE';
   const tone = toneClasses[phase.tone];
 
   return (
@@ -340,10 +307,6 @@ export default function DemoPage() {
                     className="mt-2 animate-pulse text-lg font-bold"
                   >
                     RDP Exposed: hkma.gov.hk:3389 🚨
-                  </motion.p>
-                ) : phase.id === 'simulate' ? (
-                  <motion.p key="sim-alert" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 text-lg font-bold">
-                    95% match - HK gov phishing template
                   </motion.p>
                 ) : phase.id === 'respond' ? (
                   <motion.p key="resp-alert" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 text-lg font-bold">
@@ -467,7 +430,7 @@ export default function DemoPage() {
 
             <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
               <p className="text-sm text-slate-300">Phase timeline</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="mt-3 grid grid-cols-3 gap-2">
                 {PHASES.map((p) => {
                   const active = phase.id === p.id;
                   const done = second > p.range[1];
@@ -503,60 +466,19 @@ export default function DemoPage() {
               <p className="mt-3 rounded-md border border-emerald-500/50 bg-emerald-950/30 p-2 text-sm font-semibold text-emerald-200">Final Stats: Threat neutralized in 3s ✓ 0$ damage</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
-              <p className="text-sm text-slate-300">Judge QR Scan</p>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="rounded-lg border border-slate-700 bg-white p-2">
-                  <QRCodeSVG value={`${getApiBase()}/demo`} size={84} />
-                </div>
-                <div className="text-xs text-slate-400">
-                  Scan to launch this 30s incident-response demo.
-                </div>
+            {phase.id === 'log' && (
+              <div className="rounded-2xl border border-emerald-500/50 bg-slate-950/75 p-4">
+                <p className="text-sm font-semibold text-emerald-300">Training Handbook</p>
+                <ul className="mt-3 space-y-2 text-xs text-slate-200">
+                  <li>1. Detect: Confirm exposed service and validate CVE evidence.</li>
+                  <li>2. Contain: Bring up secure tunnel and enforce ACL + kill switch.</li>
+                  <li>3. Recover: Verify safe traffic baseline and service health.</li>
+                  <li>4. Record: Log immutable compliance proof for audit.</li>
+                </ul>
               </div>
-            </div>
+            )}
           </section>
         </div>
-
-        <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm text-slate-300">Event Logs</p>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Clock3 className="h-3.5 w-3.5" /> realtime
-            </div>
-          </div>
-          <div className="overflow-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-800 text-xs uppercase text-slate-400">
-                  <th className="py-2">Time</th>
-                  <th className="py-2">Source</th>
-                  <th className="py-2">Severity</th>
-                  <th className="py-2">Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((entry) => (
-                  <tr key={entry.id} className="border-b border-slate-900">
-                    <td className="py-2 text-xs text-slate-400">{entry.timestamp}</td>
-                    <td className="py-2">{entry.source}</td>
-                    <td className={`py-2 font-semibold ${entry.severity === 'CRITICAL' ? 'text-red-300' : entry.severity === 'WARN' ? 'text-orange-300' : entry.severity === 'SUCCESS' ? 'text-emerald-300' : 'text-slate-300'}`}>
-                      {entry.severity}
-                    </td>
-                    <td className="py-2">{entry.message}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <footer className="mt-4 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            {threatLevel === 'SAFE' ? <ShieldCheck className="h-4 w-4 text-emerald-400" /> : <AlertTriangle className="h-4 w-4 text-red-400" />}
-            <span>FortressAI multi-agent execution chain: RECON -&gt; SIMULATE -&gt; RESPOND -&gt; LOG</span>
-          </div>
-          <span>HKMA zero-trust narrative for judges</span>
-        </footer>
       </div>
     </main>
   );
