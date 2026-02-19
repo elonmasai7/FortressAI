@@ -1,5 +1,5 @@
-import { FortressDeck } from '@/components/FortressDeck';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <FortressDeck />;
+  redirect('/demo');
 }
