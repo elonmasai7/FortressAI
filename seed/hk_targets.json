@@ -1,0 +1,4 @@
+[
+  {"target": "hkma.gov.hk", "port": 3389, "service": "rdp", "severity": 9},
+  {"target": "cyberport.hk", "port": 80, "service": "http", "severity": 6}
+]

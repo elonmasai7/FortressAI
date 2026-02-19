@@ -1,0 +1,93 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
+      - ENABLE_REAL_WG=true
+      - ENABLE_REAL_FABRIC=true
+      - WG_CONFIG_PATH=/etc/wireguard/fortressai.conf
+      - FABRIC_PEER_ADDRESS=hyperledger:7051
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./infra/wireguard/fortressai.conf:/etc/wireguard/fortressai.conf:ro
+    depends_on:
+      - postgres
+      - redis
+      - wireguard
+      - hyperledger
+
+  celery:
+    build: ./backend
+    command: celery -A app.tasks.celery_app worker -l info
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
+    depends_on:
+      - backend
+      - redis
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=fortress
+      - POSTGRES_PASSWORD=fortress
+      - POSTGRES_DB=fortressai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  wireguard:
+    image: linuxserver/wireguard:latest
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - SERVERURL=hk-relay-01.cyberport.hk
+      - SERVERPORT=51820
+      - PEERS=1
+      - PEERDNS=1.1.1.1
+      - INTERNAL_SUBNET=10.13.13.0
+      - ALLOWEDIPS=0.0.0.0/0
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - wgdata:/config
+
+  hyperledger:
+    image: hyperledger/fabric-peer:2.5
+    command: ["sh", "-c", "peer version && sleep infinity"]
+    ports:
+      - "7051:7051"
+
+volumes:
+  pgdata:
+  wgdata:

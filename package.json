@@ -1,0 +1,8 @@
+{
+  "name": "fortressai",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "demo": "npm --prefix frontend run demo"
+  }
+}

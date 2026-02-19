@@ -1,0 +1,10 @@
+[
+  {
+    "name": "HKMA Compliance Alert",
+    "body": "Dear customer, HKMA requires urgent account verification. Confirm credentials and wire payment now."
+  },
+  {
+    "name": "Cyberport Vendor Invoice",
+    "body": "Outstanding invoice pending. Download attached payment form and verify identity."
+  }
+]

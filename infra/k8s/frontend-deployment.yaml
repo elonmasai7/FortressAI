@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortress-frontend
+  namespace: fortressai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fortress-frontend
+  template:
+    metadata:
+      labels:
+        app: fortress-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: fortressai/frontend:latest
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: fortressai
+spec:
+  type: LoadBalancer
+  selector:
+    app: fortress-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000

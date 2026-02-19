@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortress-backend
+  namespace: fortressai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fortress-backend
+  template:
+    metadata:
+      labels:
+        app: fortress-backend
+    spec:
+      containers:
+        - name: backend
+          image: fortressai/backend:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379/0
+            - name: DATABASE_URL
+              value: postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: fortressai
+spec:
+  selector:
+    app: fortress-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
