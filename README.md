@@ -4,7 +4,7 @@ FortressAI is a full-stack cybersecurity demo platform for hackathon/pitch scena
 
 - A **Next.js 14 dashboard frontend** (`frontend/`) with a live simulation UI
 - A **FastAPI backend** (`backend/`) with agent-style endpoints
-- Optional infrastructure via Docker Compose: **Postgres (Timescale)**, **Redis**, **Celery**, **WireGuard**, **Hyperledger peer**
+- Optional infrastructure via Docker Compose: **Postgres (Timescale)**, **Redis**, **Celery**, **ExpressVPN-simulated tunnel flow**, **Hyperledger peer**
 
 The primary demo experience is:
 
@@ -32,7 +32,7 @@ In this repository, FortressAI is implemented as a **demo-ready system** with:
 - FastAPI endpoints representing each response phase
 - WebSocket metric streaming for live updates
 - Database persistence for threat/tunnel events
-- Optional infrastructure integrations (WireGuard, Hyperledger peer) with simulation fallbacks
+- Optional infrastructure integrations (ExpressVPN-style tunnel flow, Hyperledger peer) with simulation fallbacks
 
 ### Why FortressAI exists
 
@@ -92,7 +92,6 @@ infra (docker-compose)
   ├─ postgres/timescale
   ├─ redis
   ├─ celery worker
-  ├─ wireguard
   └─ hyperledger peer
 ```
 
@@ -161,7 +160,6 @@ Services and ports:
 - Backend: `http://localhost:8000`
 - Postgres: `localhost:5432`
 - Redis: `localhost:6379`
-- WireGuard UDP: `localhost:51820`
 - Hyperledger peer: `localhost:7051`
 
 ## Local Development Commands
@@ -228,7 +226,7 @@ Request:
 
 ### `POST /tunnel`
 
-Tunnel deployment flow (real or simulated WireGuard depending on env/runtime).
+Tunnel deployment flow (real or simulated ExpressVPN behavior depending on env/runtime).
 
 Request:
 
@@ -292,8 +290,8 @@ These are useful for local UI fallback behavior.
 - `REDIS_URL` (default: `redis://redis:6379/0`)
 - `DATABASE_URL` (default: `postgresql+psycopg://fortress:fortress@postgres:5432/fortressai`)
 - `DEMO_TARGET` (default: `hkma.gov.hk`)
-- `WG_CONFIG_PATH` (default: `/etc/wireguard/fortressai.conf`)
-- `ENABLE_REAL_WG` (`true`/`false`)
+- `EXPRESSVPN_PROFILE` (default: `hk`)
+- `ENABLE_REAL_EXPRESSVPN` (`true`/`false`)
 - `ENABLE_REAL_FABRIC` (`true`/`false`)
 - `FABRIC_PEER_ADDRESS` (default: `hyperledger:7051`)
 
@@ -335,10 +333,10 @@ NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
 - Check proxy/network restrictions in your environment
 - UI should still render using fallback simulation when disconnected
 
-### WireGuard operations fail in backend
+### ExpressVPN CLI operations fail in backend
 
 - This can happen outside privileged/container environments
-- Backend falls back to simulated deployment timings/results when real WG commands fail
+- Backend falls back to simulated deployment timings/results when real ExpressVPN commands fail
 
 ### Nmap scan issues
 
@@ -350,7 +348,7 @@ NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
 - Inspect service logs:
 
 ```bash
-docker compose logs -f backend frontend postgres redis celery wireguard hyperledger
+docker compose logs -f backend frontend postgres redis celery hyperledger
 ```
 
 - Rebuild clean:

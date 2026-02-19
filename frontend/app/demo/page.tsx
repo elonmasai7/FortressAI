@@ -80,8 +80,8 @@ const DEMOS: DemoScenario[] = [
     ],
     respondTerminal: [
       '$ fortressai mitigate --profile ddos-hk',
-      '$ wg-quick up fortress-tunnel',
-      '[OK] ACL enforced; flood traffic sinkholed',
+      '$ expressvpn connect hk',
+      '[OK] ExpressVPN tunnel connected; ACL enforced',
     ],
     logTerminal: [
       '$ fortressai log --incident hkma-ddos-01',
@@ -111,7 +111,7 @@ const DEMOS: DemoScenario[] = [
     respondTerminal: [
       '$ fortressai simulate --template hk_phish',
       '$ fortressai respond --playbook mail-shield',
-      '[OK] Quarantine rules and domain blocks active',
+      '[OK] ExpressVPN secured route + domain blocks active',
     ],
     logTerminal: [
       '$ fortressai log --compliance HKMA_2026',
@@ -139,9 +139,9 @@ const DEMOS: DemoScenario[] = [
       'High-risk host behavior mapped',
     ],
     respondTerminal: [
-      '$ wg-quick up fortress-tunnel',
+      '$ expressvpn connect hk',
       '$ iptables -A FORWARD -j DROP',
-      '[OK] Segment isolation complete',
+      '[OK] ExpressVPN tunnel active; segment isolation complete',
     ],
     logTerminal: [
       '$ fortressai log --incident lateral-ransom-03',

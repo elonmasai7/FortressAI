@@ -57,7 +57,7 @@ export function Slide6({ onDemoComplete }: Slide6Props) {
       const respondMode = result.respond?.mode ?? 'unknown';
       const respondLatency = result.respond?.latency_ms ?? 3000;
       const txHash = result.log?.tx_hash ?? '0xabc';
-      const responseText = `Respond Agent: WireGuard ${respondMode} mode, tunnel in ${respondLatency}ms`;
+      const responseText = `Respond Agent: ExpressVPN ${respondMode} mode, tunnel in ${respondLatency}ms`;
       setResponseAction(responseText);
       setSolution(`Solution: Threat isolated, kill switch active, immutable log ${txHash}`);
       setApiStatus(`Sequence complete: ${result.status}`);

@@ -26,18 +26,14 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
-      - ENABLE_REAL_WG=true
+      - ENABLE_REAL_EXPRESSVPN=true
       - ENABLE_REAL_FABRIC=true
-      - WG_CONFIG_PATH=/etc/wireguard/fortressai.conf
+      - EXPRESSVPN_PROFILE=hk
       - FABRIC_PEER_ADDRESS=hyperledger:7051
     cap_add:
       - NET_ADMIN
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    volumes:
-      - ./infra/wireguard/fortressai.conf:/etc/wireguard/fortressai.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/status >/dev/null || exit 1"]
       interval: 10s
@@ -48,8 +44,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      wireguard:
         condition: service_healthy
       hyperledger:
         condition: service_healthy
@@ -103,34 +97,6 @@ services:
       retries: 12
       start_period: 10s
 
-  wireguard:
-    image: linuxserver/wireguard:latest
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-      - SERVERURL=hk-relay-01.cyberport.hk
-      - SERVERPORT=51820
-      - PEERS=1
-      - PEERDNS=1.1.1.1
-      - INTERNAL_SUBNET=10.13.13.0
-      - ALLOWEDIPS=0.0.0.0/0
-    ports:
-      - "51820:51820/udp"
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    volumes:
-      - wgdata:/config
-    healthcheck:
-      test: ["CMD-SHELL", "wg show wg0 >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
   hyperledger:
     image: hyperledger/fabric-peer:2.5
     command: ["sh", "-c", "peer version && sleep infinity"]
@@ -145,4 +111,3 @@ services:
 
 volumes:
   pgdata:
-  wgdata:

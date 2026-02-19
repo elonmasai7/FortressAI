@@ -57,7 +57,7 @@ export const agentCards = [
 ];
 
 export const tunnelFeatures = [
-  'WireGuard kill switch always-on',
+  'ExpressVPN kill switch always-on',
   'Hong Kong relay routing for low latency',
   'Zero-trust micro-segmentation profile',
   'Instant policy rollback and forensic trace',
