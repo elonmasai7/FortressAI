@@ -10,6 +10,12 @@ docker-compose up --build    # Full stack
 curl localhost:8000/demo     # Trigger 30s sequence
 ```
 
+## Reliability Hardening
+
+- Compose healthchecks are enabled for `postgres`, `redis`, `wireguard`, `hyperledger`, `backend`, `celery`, and `frontend`.
+- `depends_on: condition: service_healthy` gates startup order, so app services wait for infra readiness.
+- Backend startup now uses deterministic health-gated orchestration rather than DB retry loops.
+
 ## Architecture (Slide 7 Stack)
 
 ```text
