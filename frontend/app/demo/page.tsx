@@ -1,24 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ShieldX, TerminalSquare } from 'lucide-react';
 import { fetchJson, getWsBase } from '@/lib/backend';
 
-type PhaseId = 'recon' | 'simulate' | 'respond' | 'log';
+type PhaseId = 'recon' | 'respond' | 'log';
 
 type DemoPhase = {
   id: PhaseId;
   label: string;
   range: [number, number];
-  tone: 'red' | 'orange' | 'yellow' | 'green';
+  tone: 'red' | 'yellow' | 'green';
 };
 
 type BackendStatusPayload = {
-  ts?: string;
-  phase?: PhaseId;
-  threat_level?: 'CRITICAL' | 'HIGH' | 'SAFE';
   traffic_rps?: number;
   blocked_rps?: number;
   bert_confidence?: number;
@@ -28,6 +26,34 @@ type BackendStatusPayload = {
   hyperledger_tx?: string;
 };
 
+type AttackRoute = {
+  from: [number, number];
+  fromLabel: string;
+  to: [number, number];
+  toLabel: string;
+};
+
+type DemoScenario = {
+  id: string;
+  name: string;
+  short: string;
+  incidents: number;
+  attackPeak: number;
+  bertTarget: number;
+  reconAlert: string;
+  responseAlert: string;
+  solutionAlert: string;
+  reconTerminal: string[];
+  respondTerminal: string[];
+  logTerminal: string[];
+  routes: AttackRoute[];
+};
+
+const HongKongLiveAttackMap = dynamic(
+  () => import('@/components/charts/HongKongLiveAttackMap').then((m) => m.HongKongLiveAttackMap),
+  { ssr: false },
+);
+
 const TOTAL_SECONDS = 30;
 
 const PHASES: DemoPhase[] = [
@@ -36,18 +62,105 @@ const PHASES: DemoPhase[] = [
   { id: 'log', label: 'SOLUTION', range: [23, 30], tone: 'green' },
 ];
 
+const DEMOS: DemoScenario[] = [
+  {
+    id: 'bank-ddos',
+    name: 'Demo 1',
+    short: 'Banking DDoS + RDP',
+    incidents: 15877,
+    attackPeak: 520,
+    bertTarget: 0.91,
+    reconAlert: 'RDP Exposed: hkma.gov.hk:3389 - Botnet surge from West HK',
+    responseAlert: 'SOC Mitigation: upstream filters + secure tunnel online',
+    solutionAlert: 'Banking traffic stabilized. Core services fully protected',
+    reconTerminal: [
+      '$ nmap -sV hkma.gov.hk',
+      '3389/tcp open  ms-wbt-server',
+      'Vuln: CVE-2024-38112 | severity=critical',
+    ],
+    respondTerminal: [
+      '$ fortressai mitigate --profile ddos-hk',
+      '$ wg-quick up fortress-tunnel',
+      '[OK] ACL enforced; flood traffic sinkholed',
+    ],
+    logTerminal: [
+      '$ fortressai log --incident hkma-ddos-01',
+      'Evidence bundle signed and stored',
+    ],
+    routes: [
+      { from: [22.2619, 114.1304], fromLabel: 'Cyberport', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.3714, 114.1131], fromLabel: 'Tsuen Wan', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.3872, 114.1954], fromLabel: 'Sha Tin', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+    ],
+  },
+  {
+    id: 'gov-phish',
+    name: 'Demo 2',
+    short: 'Gov Phishing Wave',
+    incidents: 14210,
+    attackPeak: 500,
+    bertTarget: 0.95,
+    reconAlert: 'Phishing infra mapped across Kowloon and East HK endpoints',
+    responseAlert: 'Mail gateway lockdown + user-risk segmentation enabled',
+    solutionAlert: 'Phishing spread contained. Malicious campaigns neutralized',
+    reconTerminal: [
+      '$ fortressai recon --campaign hk-gov-template',
+      'Known lure domains discovered: 9',
+      'Credential harvest indicators flagged',
+    ],
+    respondTerminal: [
+      '$ fortressai simulate --template hk_phish',
+      '$ fortressai respond --playbook mail-shield',
+      '[OK] Quarantine rules and domain blocks active',
+    ],
+    logTerminal: [
+      '$ fortressai log --compliance HKMA_2026',
+      'Immutable mail-security report committed',
+    ],
+    routes: [
+      { from: [22.3233, 114.2146], fromLabel: 'Kowloon Bay', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.2866, 114.2168], fromLabel: 'Quarry Bay', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.3077, 114.2594], fromLabel: 'Tseung Kwan O', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+    ],
+  },
+  {
+    id: 'ransom-move',
+    name: 'Demo 3',
+    short: 'Ransomware Lateral Move',
+    incidents: 16702,
+    attackPeak: 560,
+    bertTarget: 0.88,
+    reconAlert: 'Lateral movement detected from north-west clusters toward HK core',
+    responseAlert: 'Network segmentation + kill switch activated in 3 seconds',
+    solutionAlert: 'Ransomware chain broken. No production encryption observed',
+    reconTerminal: [
+      '$ fortressai recon --lateral east-west',
+      'SMB pivot attempts detected on internal segments',
+      'High-risk host behavior mapped',
+    ],
+    respondTerminal: [
+      '$ wg-quick up fortress-tunnel',
+      '$ iptables -A FORWARD -j DROP',
+      '[OK] Segment isolation complete',
+    ],
+    logTerminal: [
+      '$ fortressai log --incident lateral-ransom-03',
+      'Recovery checklist and audit trail finalized',
+    ],
+    routes: [
+      { from: [22.3914, 113.9771], fromLabel: 'Tuen Mun', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.308, 113.9185], fromLabel: 'Airport', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+      { from: [22.2803, 114.185], fromLabel: 'Causeway Bay', to: [22.2819, 114.1589], toLabel: 'Central/HKMA' },
+    ],
+  },
+];
+
 const toneClasses = {
   red: {
     border: 'border-red-500/45',
     glow: 'shadow-[0_0_44px_-18px_rgba(239,68,68,0.65)]',
     badge: 'bg-red-600/20 text-red-300 border-red-500/60',
     alert: 'bg-red-950/50 border-red-500/60 text-red-200',
-  },
-  orange: {
-    border: 'border-orange-500/45',
-    glow: 'shadow-[0_0_44px_-18px_rgba(249,115,22,0.58)]',
-    badge: 'bg-orange-600/20 text-orange-300 border-orange-500/60',
-    alert: 'bg-orange-950/50 border-orange-500/60 text-orange-200',
   },
   yellow: {
     border: 'border-yellow-400/45',
@@ -63,34 +176,6 @@ const toneClasses = {
   },
 };
 
-const reconTerminal = [
-  '$ nmap -sV hkma.gov.hk',
-  'Starting Nmap 7.95 at 2026-04-13',
-  '3389/tcp open  ms-wbt-server Microsoft Terminal Services',
-  'Vuln: CVE-2024-38112 detected | risk=critical',
-];
-
-const simulateTerminal = [
-  '$ fortressai simulate --template hk_phish',
-  'Loading Hong Kong gov phishing corpus...',
-  'Classifier verdict: 95% match to known template',
-  'Outbound campaign emulation rate: 500rps',
-];
-
-const respondTerminal = [
-  '$ wg-quick up fortress-tunnel',
-  '[OK] Interface fortress-tunnel activated',
-  '[OK] ACL enforced: HKMA production allow-list',
-  '[OK] Traffic sinkholed and blocked',
-];
-
-const logTerminal = [
-  '$ fortressai log --immutable --hkma',
-  'Hyperledger anchor broadcast pending...',
-  'tx: 0xabc123def4567890feaa001122334455',
-  'Compliance package sealed (100% HKMA Compliant)',
-];
-
 const bertSeries = [
   { name: 'Email A', confidence: 0.31 },
   { name: 'Email B', confidence: 0.95 },
@@ -102,27 +187,28 @@ function getPhase(second: number): DemoPhase {
   return PHASES.find((p) => second >= p.range[0] && second <= p.range[1]) || PHASES[PHASES.length - 1];
 }
 
+function makeTrafficSeed() {
+  return Array.from({ length: 24 }, (_, i) => ({ t: `${i}`, normal: 80, attack: 80, blocked: 0 }));
+}
+
 export default function DemoPage() {
+  const [scenarioId, setScenarioId] = useState(DEMOS[0].id);
   const [second, setSecond] = useState(0);
   const [running, setRunning] = useState(true);
   const [connected, setConnected] = useState(false);
   const [terminal, setTerminal] = useState<string[]>([]);
-  const [incidents] = useState(15877);
-  const [trafficData, setTrafficData] = useState<Array<{ t: string; normal: number; attack: number; blocked: number }>>(
-    Array.from({ length: 24 }, (_, i) => ({ t: `${i}`, normal: 80, attack: 80, blocked: 0 }))
-  );
+  const [trafficData, setTrafficData] = useState<Array<{ t: string; normal: number; attack: number; blocked: number }>>(makeTrafficSeed());
   const [bertConfidence, setBertConfidence] = useState(0.12);
   const [tunnelLatency, setTunnelLatency] = useState(999);
   const [tunnelActive, setTunnelActive] = useState(false);
   const [killSwitch, setKillSwitch] = useState(false);
   const [hyperledgerTx, setHyperledgerTx] = useState('pending...');
   const socketRef = useRef<WebSocket | null>(null);
+
+  const scenario = useMemo(() => DEMOS.find((demo) => demo.id === scenarioId) || DEMOS[0], [scenarioId]);
   const phase = getPhase(second);
 
-  const safeIn3s = useMemo(() => {
-    if (phase.id !== 'respond') return false;
-    return second >= 19;
-  }, [phase.id, second]);
+  const safeIn3s = useMemo(() => phase.id === 'respond' && second >= 19, [phase.id, second]);
 
   const addTerminalBlock = useCallback((lines: string[]) => {
     setTerminal((current) => [...current, ...lines].slice(-18));
@@ -152,7 +238,7 @@ export default function DemoPage() {
     try {
       await fetchJson(path, init);
     } catch {
-      // keep demo running with fallback visuals
+      // fallback mode keeps UI running
     }
   }, []);
 
@@ -160,7 +246,7 @@ export default function DemoPage() {
     setSecond(0);
     setRunning(true);
     setTerminal([]);
-    setTrafficData(Array.from({ length: 24 }, (_, i) => ({ t: `${i}`, normal: 80, attack: 80, blocked: 0 })));
+    setTrafficData(makeTrafficSeed());
     setBertConfidence(0.12);
     setTunnelLatency(999);
     setTunnelActive(false);
@@ -168,6 +254,14 @@ export default function DemoPage() {
     setHyperledgerTx('pending...');
     await runRestAction('/reset', { method: 'POST' });
   }, [runRestAction]);
+
+  const switchScenario = useCallback(
+    async (nextId: string) => {
+      setScenarioId(nextId);
+      await resetDemo();
+    },
+    [resetDemo],
+  );
 
   useEffect(() => {
     const wsUrl = `${getWsBase()}/ws/status`;
@@ -217,12 +311,12 @@ export default function DemoPage() {
 
   useEffect(() => {
     if (phase.id === 'recon') {
-      addTerminalBlock(reconTerminal);
+      addTerminalBlock(scenario.reconTerminal);
       runRestAction('/scan', { method: 'POST' });
     }
     if (phase.id === 'respond') {
-      addTerminalBlock(respondTerminal);
-      setBertConfidence(0.95);
+      addTerminalBlock(scenario.respondTerminal);
+      setBertConfidence(scenario.bertTarget);
       setTunnelLatency(50);
       setTunnelActive(true);
       setKillSwitch(true);
@@ -230,17 +324,17 @@ export default function DemoPage() {
       runRestAction('/tunnel', { method: 'POST' });
     }
     if (phase.id === 'log') {
-      addTerminalBlock(logTerminal);
-      setHyperledgerTx('0xabc123...logged');
+      addTerminalBlock(scenario.logTerminal);
+      setHyperledgerTx(`0x${scenario.id.slice(0, 4)}123...logged`);
       runRestAction('/logs', { method: 'GET' });
     }
-  }, [phase.id, addTerminalBlock, runRestAction]);
+  }, [phase.id, scenario, addTerminalBlock, runRestAction]);
 
   useEffect(() => {
     if (connected) return;
     const timer = setInterval(() => {
-      const attackValue = phase.id === 'recon' ? 400 + Math.random() * 120 : phase.id === 'respond' ? 120 + Math.random() * 45 : 72 + Math.random() * 20;
-      const blockedValue = phase.id === 'respond' || phase.id === 'log' ? Math.min(500, attackValue - 30) : 0;
+      const attackValue = phase.id === 'recon' ? scenario.attackPeak * 0.82 + Math.random() * 90 : phase.id === 'respond' ? 120 + Math.random() * 45 : 72 + Math.random() * 20;
+      const blockedValue = phase.id === 'respond' || phase.id === 'log' ? Math.min(scenario.attackPeak, attackValue - 30) : 0;
       setTrafficData((current) => [
         ...current.slice(1),
         {
@@ -253,7 +347,7 @@ export default function DemoPage() {
     }, 1200);
 
     return () => clearInterval(timer);
-  }, [connected, phase.id]);
+  }, [connected, phase.id, scenario.attackPeak]);
 
   const progress = Math.round((second / TOTAL_SECONDS) * 100);
   const threatLevel = phase.id === 'recon' ? 'CRITICAL' : phase.id === 'respond' ? (safeIn3s ? 'STABILIZING' : 'HIGH') : 'SAFE';
@@ -270,9 +364,9 @@ export default function DemoPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-wide">🛡️ FORTRESSAI | Threat Level: {threatLevel}</h1>
-              <p className="mt-1 text-sm text-slate-300">Hong Kong Hackathon 2026 - Slide 6 Live Demo</p>
+              <p className="mt-1 text-sm text-slate-300">Live Hong Kong Attack Simulation Dashboard</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tone.badge}`}>{phase.label}</span>
               <span className="rounded-md border border-slate-700 px-3 py-1 text-xs text-slate-300">{second}s / 30s</span>
               <span className={`rounded-md border px-3 py-1 text-xs ${connected ? 'border-emerald-500/60 bg-emerald-600/20 text-emerald-200' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
@@ -280,12 +374,30 @@ export default function DemoPage() {
               </span>
               <button
                 type="button"
-                onClick={resetDemo}
+                onClick={() => {
+                  void resetDemo();
+                }}
                 className="rounded-md border border-emerald-500/60 bg-emerald-600/20 px-3 py-1 text-xs font-semibold text-emerald-200 hover:bg-emerald-600/30"
               >
                 Reset Demo
               </button>
             </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {DEMOS.map((demo) => (
+              <button
+                key={demo.id}
+                type="button"
+                onClick={() => {
+                  void switchScenario(demo.id);
+                }}
+                className={`rounded-lg border px-3 py-2 text-left text-xs transition ${scenarioId === demo.id ? 'border-cyan-400 bg-cyan-500/15 text-cyan-200' : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500'}`}
+              >
+                <p className="font-semibold">{demo.name}</p>
+                <p>{demo.short}</p>
+              </button>
+            ))}
           </div>
 
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
@@ -299,66 +411,33 @@ export default function DemoPage() {
               <p className="text-xs uppercase tracking-[0.18em]">Live Alert</p>
               <AnimatePresence mode="wait">
                 {phase.id === 'recon' ? (
-                  <motion.p
-                    key="recon-alert"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="mt-2 animate-pulse text-lg font-bold"
-                  >
-                    RDP Exposed: hkma.gov.hk:3389 🚨
+                  <motion.p key="recon-alert" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 animate-pulse text-lg font-bold">
+                    {scenario.reconAlert}
                   </motion.p>
                 ) : phase.id === 'respond' ? (
                   <motion.p key="resp-alert" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 text-lg font-bold">
-                    🚀 ExpressVPN Tunnel Deployed - {Math.max(0, 19 - second)}s
+                    {scenario.responseAlert}
                   </motion.p>
                 ) : (
                   <motion.p key="log-alert" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 text-lg font-bold">
-                    100% HKMA Compliant
+                    {scenario.solutionAlert}
                   </motion.p>
                 )}
               </AnimatePresence>
             </div>
 
             <div className="rounded-2xl border border-red-500/35 bg-slate-950/70 p-4">
-              <p className="text-xs uppercase text-slate-400">HK Map</p>
-              <div className="mt-2 h-52 overflow-hidden rounded-xl border border-slate-800 bg-black">
-                <svg viewBox="0 0 420 250" className="h-full w-full">
-                  <rect width="420" height="250" fill="#020617" />
-                  <text x="56" y="196" fill="#f87171" fontSize="13">Cyberport</text>
-                  <text x="282" y="90" fill="#f87171" fontSize="13">Kowloon</text>
-                  <circle cx="86" cy="180" r="7" fill="#dc2626" />
-                  <circle cx="314" cy="74" r="7" fill="#dc2626" />
-                  <motion.path
-                    d="M86 180 C 170 120, 220 120, 314 74"
-                    stroke="#ef4444"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeDasharray="10 10"
-                    animate={{ strokeDashoffset: [0, -26] }}
-                    transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-                  />
-                  {phase.id === 'recon' && (
-                    <motion.circle
-                      cx="314"
-                      cy="74"
-                      r="18"
-                      stroke="#f43f5e"
-                      strokeWidth="2"
-                      fill="transparent"
-                      animate={{ scale: [0.8, 1.7], opacity: [0.95, 0] }}
-                      transition={{ duration: 1.1, repeat: Infinity }}
-                    />
-                  )}
-                </svg>
+              <p className="text-xs uppercase text-slate-400">Hong Kong Live Attack Map</p>
+              <div className="mt-2">
+                <HongKongLiveAttackMap phase={phase.id} second={second} routes={scenario.routes} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
-                <p className="text-xs text-slate-400">HKPC 2025</p>
-                <p className="mt-1 text-xl font-bold text-red-300">{incidents.toLocaleString()}</p>
-                <p className="text-xs text-slate-500">incidents</p>
+                <p className="text-xs text-slate-400">Incidents</p>
+                <p className="mt-1 text-xl font-bold text-red-300">{scenario.incidents.toLocaleString()}</p>
+                <p className="text-xs text-slate-500">HK threat context</p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                 <p className="text-xs text-slate-400">Latency</p>
@@ -372,7 +451,7 @@ export default function DemoPage() {
             <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
               <div className="mb-2 flex items-center gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-orange-300" />
-                <span>Attack Graph: Normal traffic -&gt; Phishing flood (500rps)</span>
+                <span>Attack Graph: Normal traffic -&gt; live attack spike -&gt; blocked traffic</span>
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -470,10 +549,10 @@ export default function DemoPage() {
               <div className="rounded-2xl border border-emerald-500/50 bg-slate-950/75 p-4">
                 <p className="text-sm font-semibold text-emerald-300">Training Handbook</p>
                 <ul className="mt-3 space-y-2 text-xs text-slate-200">
-                  <li>1. Detect: Confirm exposed service and validate CVE evidence.</li>
-                  <li>2. Contain: Bring up secure tunnel and enforce ACL + kill switch.</li>
-                  <li>3. Recover: Verify safe traffic baseline and service health.</li>
-                  <li>4. Record: Log immutable compliance proof for audit.</li>
+                  <li>1. Detect: confirm exposed service and validate active indicators.</li>
+                  <li>2. Contain: deploy secure tunnel, enforce ACL and kill switch.</li>
+                  <li>3. Recover: verify traffic baseline and service health in all zones.</li>
+                  <li>4. Record: log immutable compliance proof for audit.</li>
                 </ul>
               </div>
             )}
