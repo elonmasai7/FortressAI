@@ -11,6 +11,57 @@ The primary demo experience is:
 - `/` -> multi-slide Fortress deck
 - `/demo` -> focused live simulation (Attack -> Response -> Solution -> Training handbook)
 
+## What is FortressAI?
+
+FortressAI is a cybersecurity orchestration concept that demonstrates how a security team can move from **detection** to **containment** to **proof of compliance** in a single, fast incident-response flow.
+
+At a high level, FortressAI models four cooperating functions:
+
+1. **Recon**
+   Finds exposed services and risky attack surfaces (for example exposed RDP on critical infrastructure targets).
+2. **Simulate**
+   Emulates likely attack behavior (such as phishing campaigns) to test detection quality and response readiness.
+3. **Respond**
+   Activates containment controls (for example secure tunnel actions and kill-switch style traffic restrictions) to reduce active risk quickly.
+4. **Log**
+   Records tamper-evident incident evidence for audit/compliance reporting.
+
+In this repository, FortressAI is implemented as a **demo-ready system** with:
+
+- A live dashboard UI for real-time incident storytelling
+- FastAPI endpoints representing each response phase
+- WebSocket metric streaming for live updates
+- Database persistence for threat/tunnel events
+- Optional infrastructure integrations (WireGuard, Hyperledger peer) with simulation fallbacks
+
+### Why FortressAI exists
+
+Security demos often show disconnected tooling. FortressAI is designed to show the opposite: a connected response chain where every phase is linked and measurable.
+
+Key outcomes the demo emphasizes:
+
+- **Speed:** quick transition from alert to containment
+- **Clarity:** a single operational view for what happened and what was done
+- **Resilience:** graceful fallback to mock/simulated mode when live dependencies are unavailable
+- **Auditability:** structured event and compliance logging
+
+### What FortressAI is and is not
+
+FortressAI in this repo is best understood as a **reference demo platform** for product validation, hackathon judging, and stakeholder storytelling.
+
+It is:
+
+- A practical full-stack prototype
+- Suitable for live demos and technical walkthroughs
+- Built to run in constrained local/dev environments
+
+It is not:
+
+- A hardened production SOC platform out of the box
+- A complete replacement for enterprise SIEM/SOAR deployment practices
+
+Use it as an accelerator for demonstrations, architecture conversations, and iterative security product development.
+
 ## What This Repo Contains
 
 - **Frontend demo UX** for SOC-style incident simulation
