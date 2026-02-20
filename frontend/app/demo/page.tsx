@@ -26,6 +26,17 @@ type BackendStatusPayload = {
   hyperledger_tx?: string;
 };
 
+type TunnelApiResponse = {
+  endpoint: string;
+  deployed: boolean;
+  latency_ms: number;
+  kill_switch: boolean;
+  mode: string;
+  vpn_provider?: string;
+  profile?: string;
+  real_attempted?: boolean;
+};
+
 type AttackRoute = {
   from: [number, number];
   fromLabel: string;
@@ -202,6 +213,9 @@ export default function DemoPage() {
   const [tunnelLatency, setTunnelLatency] = useState(999);
   const [tunnelActive, setTunnelActive] = useState(false);
   const [killSwitch, setKillSwitch] = useState(false);
+  const [vpnMode, setVpnMode] = useState('simulated-expressvpn');
+  const [vpnProfile, setVpnProfile] = useState('hk');
+  const [vpnEndpoint, setVpnEndpoint] = useState('hk-relay-01.cyberport.hk');
   const [hyperledgerTx, setHyperledgerTx] = useState('pending...');
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -251,9 +265,49 @@ export default function DemoPage() {
     setTunnelLatency(999);
     setTunnelActive(false);
     setKillSwitch(false);
+    setVpnMode('simulated-expressvpn');
+    setVpnProfile('hk');
+    setVpnEndpoint('hk-relay-01.cyberport.hk');
     setHyperledgerTx('pending...');
     await runRestAction('/reset', { method: 'POST' });
   }, [runRestAction]);
+
+  const deployExpressVpn = useCallback(
+    async (endpoint: string) => {
+      try {
+        const result = await fetchJson<TunnelApiResponse>('/tunnel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+
+        setTunnelActive(result.deployed);
+        setTunnelLatency(result.latency_ms);
+        setKillSwitch(result.kill_switch);
+        setVpnMode(result.mode);
+        setVpnProfile(result.profile ?? 'hk');
+        setVpnEndpoint(result.endpoint);
+
+        addTerminalBlock([
+          `$ expressvpn connect ${result.profile ?? 'hk'}`,
+          `[VPN] provider=${result.vpn_provider ?? 'ExpressVPN'} mode=${result.mode}`,
+          `[VPN] endpoint=${result.endpoint} latency=${result.latency_ms}ms`,
+        ]);
+      } catch {
+        setTunnelActive(true);
+        setTunnelLatency(50);
+        setKillSwitch(true);
+        setVpnMode('simulated-expressvpn');
+        setVpnProfile('hk');
+        setVpnEndpoint(endpoint);
+        addTerminalBlock([
+          `$ expressvpn connect hk`,
+          '[VPN] backend unavailable; local ExpressVPN simulation active',
+        ]);
+      }
+    },
+    [addTerminalBlock],
+  );
 
   const switchScenario = useCallback(
     async (nextId: string) => {
@@ -317,11 +371,8 @@ export default function DemoPage() {
     if (phase.id === 'respond') {
       addTerminalBlock(scenario.respondTerminal);
       setBertConfidence(scenario.bertTarget);
-      setTunnelLatency(50);
-      setTunnelActive(true);
-      setKillSwitch(true);
       runRestAction('/simulate', { method: 'POST' });
-      runRestAction('/tunnel', { method: 'POST' });
+      void deployExpressVpn('hk-relay-01.cyberport.hk');
     }
     if (phase.id === 'log') {
       addTerminalBlock(scenario.logTerminal);
@@ -498,7 +549,12 @@ export default function DemoPage() {
                   </div>
                   <div className="flex items-center justify-between rounded-md border border-slate-700 bg-slate-900/60 p-2">
                     <span>Target latency</span>
-                    <span className="font-semibold text-cyan-300">50ms</span>
+                    <span className="font-semibold text-cyan-300">{tunnelLatency}ms</span>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-900/60 p-2">
+                    <p className="text-[11px] text-slate-400">ExpressVPN</p>
+                    <p className="text-xs text-slate-200">profile: {vpnProfile} | mode: {vpnMode}</p>
+                    <p className="text-xs text-slate-400">{vpnEndpoint}</p>
                   </div>
                   <div className="rounded-md border border-emerald-500/50 bg-emerald-950/40 p-2 text-emerald-200">
                     {safeIn3s ? 'Threat neutralized in 3s ✓' : 'Mitigation in progress...'}
@@ -543,6 +599,15 @@ export default function DemoPage() {
               <p className="text-sm text-slate-300">Immutable evidence</p>
               <p className="mt-2 rounded-md border border-emerald-500/50 bg-emerald-950/40 p-2 font-mono text-xs text-emerald-200">Hyperledger tx: {hyperledgerTx}</p>
               <p className="mt-3 rounded-md border border-emerald-500/50 bg-emerald-950/30 p-2 text-sm font-semibold text-emerald-200">Final Stats: Threat neutralized in 3s ✓ 0$ damage</p>
+              <button
+                type="button"
+                onClick={() => {
+                  void deployExpressVpn(vpnEndpoint);
+                }}
+                className="mt-3 w-full rounded-md border border-cyan-500/50 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
+              >
+                Reconnect ExpressVPN Tunnel
+              </button>
             </div>
 
             {phase.id === 'log' && (
