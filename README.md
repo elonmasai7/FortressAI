@@ -138,7 +138,7 @@ Services:
 On backend startup, FortressAI seeds two default Guardian users if they do not already exist:
 
 - `demo.hk@fortressai.local` / `Fortress123!` (region `HK`)
-- `demo.ke@fortressai.local` / `Fortress123!` (region `KE`)
+- `demo.ke@fortressai.local` / `Fortress123!` 
 
 ## Environment Variables
 
