@@ -8,6 +8,7 @@ from app.database import SessionLocal
 from app.models import User
 from app.services.blockchain_guardian import analyze_contract, monitor_wallet, scan_approvals
 from app.services.logging_agent import immutable_log
+from app.services.notifications import deliver_alert_channels
 from app.services.recon import run_recon
 from app.services.respond import deploy_tunnel
 from app.services.simulate import detect_phishing
@@ -33,6 +34,18 @@ def respond_task(endpoint: str) -> dict:
 @celery_app.task(name="tasks.log")
 def log_task(payload: dict) -> dict:
     return immutable_log(payload)
+
+
+@celery_app.task(
+    name="tasks.alert.deliver",
+    bind=True,
+    autoretry_for=(RuntimeError,),
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
+def deliver_alert_task(self, subject: str, message: str) -> dict:
+    return deliver_alert_channels(subject, message)
 
 
 @celery_app.task(name="tasks.guardian.monitor_wallet")

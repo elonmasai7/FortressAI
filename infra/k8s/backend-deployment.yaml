@@ -39,6 +39,42 @@ spec:
                   name: fortressai-secrets
                   key: ELASTIC_INGEST_URL
                   optional: true
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: SENDGRID_API_KEY
+                  optional: true
+            - name: ALERT_EMAIL_TO
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: ALERT_EMAIL_TO
+                  optional: true
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: TWILIO_ACCOUNT_SID
+                  optional: true
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: TWILIO_AUTH_TOKEN
+                  optional: true
+            - name: TWILIO_FROM_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: TWILIO_FROM_NUMBER
+                  optional: true
+            - name: TWILIO_TO_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: TWILIO_TO_NUMBER
+                  optional: true
 ---
 apiVersion: v1
 kind: Service

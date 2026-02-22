@@ -1,99 +1,77 @@
 # FortressAI
 
-FortressAI is a full-stack cybersecurity demo platform for hackathon/pitch scenarios. It combines:
+FortressAI is a full-stack cybersecurity platform with two operating modes in one repo:
 
-- A **Next.js 14 dashboard frontend** (`frontend/`) with a live simulation UI
-- A **FastAPI backend** (`backend/`) with agent-style endpoints
-- Optional infrastructure via Docker Compose: **Postgres (Timescale)**, **Redis**, **Celery**, **ExpressVPN-simulated tunnel flow**, **Hyperledger peer**
+- Demo mode: original attack-response-log simulation flow for presentations
+- Guardian mode: production-oriented blockchain wallet security for individuals and SMEs
 
-The primary demo experience is:
+The Guardian extension is focused on wallet drain prevention, phishing detection, risky approvals, malicious contract analysis, and real-time alerting.
 
-- `/` -> multi-slide Fortress deck
-- `/demo` -> focused live simulation (Attack -> Response -> Solution -> Training handbook)
-- `/guardian` -> blockchain wallet security operations dashboard (JWT-protected)
+## Tech Stack
 
-## What is FortressAI?
+- Frontend: Next.js 14 (TypeScript)
+- Backend: FastAPI (Python)
+- Realtime: Socket.IO + WebSocket endpoints
+- Queue: Celery + Redis
+- Database: PostgreSQL 16 + TimescaleDB
+- Infra: Docker Compose (local), Kubernetes/EKS manifests (production)
 
-FortressAI is a cybersecurity orchestration concept that demonstrates how a security team can move from **detection** to **containment** to **proof of compliance** in a single, fast incident-response flow.
+## Current Features
 
-At a high level, FortressAI models four cooperating functions:
+### Demo Mode
 
-1. **Recon**
-   Finds exposed services and risky attack surfaces (for example exposed RDP on critical infrastructure targets).
-2. **Simulate**
-   Emulates likely attack behavior (such as phishing campaigns) to test detection quality and response readiness.
-3. **Respond**
-   Activates containment controls (for example secure tunnel actions and kill-switch style traffic restrictions) to reduce active risk quickly.
-4. **Log**
-   Records tamper-evident incident evidence for audit/compliance reporting.
+- Recon / simulate / respond / log API pipeline
+- Live dashboard at `/demo`
+- Metrics websocket at `/ws/status`
 
-In this repository, FortressAI is implemented as a **demo-ready system** with:
+### Guardian Mode
 
-- A live dashboard UI for real-time incident storytelling
-- FastAPI endpoints representing each response phase
-- WebSocket metric streaming for live updates
-- Database persistence for threat/tunnel events
-- Optional infrastructure integrations (ExpressVPN-style tunnel flow, Hyperledger peer) with simulation fallbacks
+- JWT auth (`/guardian/auth/register`, `/guardian/auth/login`)
+- Wallet monitoring (`/guardian/monitor-wallet`)
+- Token approval scanner (`/guardian/scan-approvals`)
+- Smart contract analyzer (`/guardian/analyze-contract`)
+- Phishing URL checker (`/guardian/check-phishing`)
+- Alert management (`/guardian/alerts`, alert actions)
+- SIEM / IDS / firewall ingestion endpoints
+- Real-time alert push over Socket.IO (`alerts:update`)
 
-### Why FortressAI exists
+## Integrations
 
-Security demos often show disconnected tooling. FortressAI is designed to show the opposite: a connected response chain where every phase is linked and measurable.
+Implemented with real API/service paths and cache fallbacks:
 
-Key outcomes the demo emphasizes:
-
-- **Speed:** quick transition from alert to containment
-- **Clarity:** a single operational view for what happened and what was done
-- **Resilience:** graceful fallback to mock/simulated mode when live dependencies are unavailable
-- **Auditability:** structured event and compliance logging
-
-### What FortressAI is and is not
-
-FortressAI in this repo is best understood as a **reference demo platform** for product validation, hackathon judging, and stakeholder storytelling.
-
-It is:
-
-- A practical full-stack prototype
-- Suitable for live demos and technical walkthroughs
-- Built to run in constrained local/dev environments
-
-It is not:
-
-- A hardened production SOC platform out of the box
-- A complete replacement for enterprise SIEM/SOAR deployment practices
-
-Use it as an accelerator for demonstrations, architecture conversations, and iterative security product development.
-
-## What This Repo Contains
-
-- **Frontend demo UX** for SOC-style incident simulation
-- **Backend APIs** for recon/simulate/respond/log phases
-- **WebSocket status stream** for live dashboard updates
-- **Mock fallbacks** so frontend can still run when backend is offline
-- **Docker Compose stack** for an end-to-end local environment
+- Etherscan API (tx history and contract metadata)
+- GoPlus Security API (address/token risk signals)
+- MetaMask `eth-phishing-detect` feed
+- PhishTank feed
+- ELK-compatible ingest hook (`ELASTIC_INGEST_URL`, optional)
+- Alert providers via Celery queue:
+  - Discord webhook
+  - Telegram bot
+  - SendGrid email
+  - Twilio SMS
 
 ## Architecture
 
 ```text
-frontend (Next.js 14)
-  ├─ /            -> FortressDeck slides
-  ├─ /demo        -> live 30s simulation screen
-  ├─ /api/*       -> mock Next API routes for UI fallback
-  └─ ws client    -> ws://<backend>/ws/status
+frontend (Next.js)
+  /demo       -> legacy cyber demo UI
+  /guardian   -> blockchain security dashboard
 
-backend (FastAPI)
-  ├─ POST /scan      (Recon Agent)
-  ├─ POST /simulate  (Simulate Agent)
-  ├─ POST /tunnel    (Respond Agent)
-  ├─ POST /log       (Log Agent)
-  ├─ GET  /status    (live metrics snapshot)
-  ├─ GET  /demo      (scripted 30s-ish flow)
-  └─ WS   /ws/status (1s push stream)
+backend (FastAPI + Socket.IO ASGI app)
+  /scan, /simulate, /tunnel, /log
+  /guardian/*
+  /ws/status
+  Socket.IO event: alerts:update
 
-infra (docker-compose)
-  ├─ postgres/timescale
-  ├─ redis
-  ├─ celery worker
-  └─ hyperledger peer
+services
+  blockchain_guardian.py  -> monitor/scan/analyze/check logic
+  integrations.py         -> Etherscan/GoPlus/phishing feeds
+  alerts.py               -> alert persistence + SIEM + realtime emit
+  notifications.py        -> provider fanout (Discord/Telegram/SendGrid/Twilio)
+
+tasks (Celery)
+  guardian scans
+  alert delivery with retries
 ```
 
 ## Repository Layout
@@ -103,106 +81,93 @@ infra (docker-compose)
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── routers/api.py
-│   │   ├── ws/socket.py
+│   │   ├── realtime.py
+│   │   ├── routers/
+│   │   │   ├── api.py
+│   │   │   └── guardian.py
 │   │   ├── services/
-│   │   ├── models.py
-│   │   ├── schemas.py
-│   │   └── tasks.py
-│   ├── scripts/bootstrap.sh
-│   ├── requirements.txt
-│   └── Dockerfile
+│   │   ├── tasks.py
+│   │   └── ws/socket.py
+│   └── tests/
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx
 │   │   ├── demo/page.tsx
-│   │   └── api/
-│   ├── components/
-│   ├── hooks/
-│   ├── lib/
-│   └── README.md
+│   │   └── guardian/page.tsx
+│   └── lib/
 ├── infra/
-├── seed/
+│   └── k8s/
 ├── scripts/
-├── docker-compose.yml
-└── README.md
+└── docker-compose.yml
 ```
 
 ## Quick Start
 
-### Option A: Frontend only (fastest)
-
-Use this when you only need UI/demo behavior.
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-Notes:
-
-- UI will try backend at `http://localhost:8000` by default.
-- If backend is unavailable, the frontend uses local mock behavior for simulation.
-
-### Option B: Full stack with Docker Compose
-
-Use this for full API + DB + worker + infra emulation.
+### 1) Run full stack with Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-Services and ports:
+Services:
 
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:8000`
 - Postgres: `localhost:5432`
 - Redis: `localhost:6379`
-- Hyperledger peer: `localhost:7051`
 
-## Local Development Commands
+### 2) Open apps
 
-### Root
+- Demo: `http://localhost:3000/demo`
+- Guardian: `http://localhost:3000/guardian`
 
-```bash
-npm run demo
-```
+## Environment Variables
 
-Runs frontend demo script from root package config.
+### Core
 
-### Frontend
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET_KEY`
 
-```bash
-cd frontend
-npm install
-npm run dev
-npm run build
-npm test
-npm run lint
-```
+### Blockchain & Threat Intel
 
-### Backend (without Docker)
+- `ETHERSCAN_API_KEY`
+- `ETHERSCAN_BASE_URL` (optional override)
+- `GOPLUS_BASE_URL` (optional override)
+- `METAMASK_PHISHING_URL` (optional override)
+- `PHISHTANK_FEED_URL` (optional override)
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+### SIEM / Cloud Security
 
-If running backend outside Docker, set environment variables (notably `DATABASE_URL`, `REDIS_URL`) to reachable local services.
+- `ELASTIC_INGEST_URL` (optional)
+- `AWS_SECURITY_HUB_ENABLED` (optional)
+- `AWS_REGION` (optional)
 
-## API Reference (Backend)
+### Alert Providers (Optional)
+
+- `DISCORD_WEBHOOK_URL`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `SENDGRID_API_KEY`
+- `ALERT_EMAIL_FROM`
+- `ALERT_EMAIL_TO`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER`
+- `TWILIO_TO_NUMBER`
+
+## API Summary
 
 Base URL: `http://localhost:8000`
 
-## FortressAI Guardian (Blockchain Security Extension)
+### Demo APIs
 
-New backend endpoints under `/guardian`:
+- `POST /scan`
+- `POST /simulate`
+- `POST /tunnel`
+- `POST /log`
+- `GET /status`
+
+### Guardian APIs
 
 - `POST /guardian/auth/register`
 - `POST /guardian/auth/login`
@@ -216,204 +181,83 @@ New backend endpoints under `/guardian`:
 - `POST /guardian/ingest/ids`
 - `POST /guardian/ingest/firewall`
 
-New websocket stream:
+### Realtime
 
-- `WS /ws/alerts?token=<jwt>`
+- `WS /ws/status` (legacy metrics)
+- Socket.IO namespace default at `/socket.io`
+- Socket.IO auth: `auth.token = <JWT>`
+- Event emitted by backend: `alerts:update`
 
-Supported chains in monitoring/scanning:
+## Alert Delivery Queue
 
-- Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Avalanche, Base
+Alert fanout is queued through Celery task:
 
-Primary live integrations:
+- `tasks.alert.deliver`
 
-- Etherscan v2 API (tx history, contract verification metadata)
-- GoPlus Security API (address/token risk signals)
-- MetaMask `eth-phishing-detect` feed (blacklist)
-- PhishTank feed (phishing domain checks)
-- ELK-compatible ingest hook via `ELASTIC_INGEST_URL` (optional)
+Retry strategy:
 
-### Guardian Environment Variables
+- Exponential backoff
+- Jitter enabled
+- Max retries: 5
 
-Set these in `.env` or compose environment:
-
-- `JWT_SECRET_KEY`
-- `ETHERSCAN_API_KEY`
-- `ELASTIC_INGEST_URL` (optional)
-- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` (optional)
-- `DISCORD_WEBHOOK_URL` (optional)
-- `REDIS_CACHE_TTL_SECONDS` (optional)
-
-### 5-Minute EKS Deploy Script
-
-Use `scripts/deploy_eks_5min.sh` for a fast image build/push and rolling deployment update.
-Required vars:
-
-- `AWS_ACCOUNT_ID`
-- optional: `AWS_REGION`, `IMAGE_TAG`, `K8S_NAMESPACE`, `ECR_REPO_BACKEND`, `ECR_REPO_FRONTEND`
-
-### `POST /scan`
-
-Recon scan (nmap-based with fallback seed findings).
-
-Request:
-
-```json
-{
-  "target": "hkma.gov.hk",
-  "ports": "1-10000"
-}
-```
-
-### `POST /simulate`
-
-Phishing simulation scoring (keyword/BERT-style heuristic output).
-
-Request:
-
-```json
-{
-  "email_text": "HKMA urgent compliance alert. Verify account and wire payment."
-}
-```
-
-### `POST /tunnel`
-
-Tunnel deployment flow (real or simulated ExpressVPN behavior depending on env/runtime).
-
-Request:
-
-```json
-{
-  "endpoint": "hk-relay-01.cyberport.hk"
-}
-```
-
-### `POST /log`
-
-Immutable logging step (Hyperledger-aware simulated hash output).
-
-Request:
-
-```json
-{
-  "threat_id": "0xabc",
-  "compliance": "HKMA_2026",
-  "payload": "demo"
-}
-```
-
-### `GET /status`
-
-Returns current metrics snapshot for dashboard polling/streaming.
-
-### `GET /demo`
-
-Runs a scripted multi-step demo timeline and returns a combined result.
-
-### `GET /qr`
-
-Returns a PNG QR that points to the frontend demo URL.
-
-### `WS /ws/status`
-
-Streams `metrics_store.snapshot()` every second.
-
-## Frontend Routes
-
-- `/` -> main Fortress deck (`frontend/components/FortressDeck.tsx`)
-- `/demo` -> live simulation dashboard (`frontend/app/demo/page.tsx`)
-
-Next.js mock API routes (frontend-side):
-
-- `GET /api/scan`
-- `POST /api/tunnel`
-- `GET /api/logs`
-
-These are useful for local UI fallback behavior.
-
-## Environment Variables
+## Testing
 
 ### Frontend
 
-- `NEXT_PUBLIC_API_BASE` (default: `http://localhost:8000`)
+```bash
+cd frontend
+npm test -- --watch=false
+npm run build
+```
 
 ### Backend
 
-- `REDIS_URL` (default: `redis://redis:6379/0`)
-- `DATABASE_URL` (default: `postgresql+psycopg://fortress:fortress@postgres:5432/fortressai`)
-- `DEMO_TARGET` (default: `hkma.gov.hk`)
-- `EXPRESSVPN_PROFILE` (default: `hk`)
-- `ENABLE_REAL_EXPRESSVPN` (`true`/`false`)
-- `ENABLE_REAL_FABRIC` (`true`/`false`)
-- `FABRIC_PEER_ADDRESS` (default: `hyperledger:7051`)
-
-## Data and Scripts
-
-- Seed data:
-  - `seed/hk_targets.json`
-  - `seed/phishing_templates.json`
-- Scripts:
-  - `scripts/generate_qr.sh` -> saves backend QR to `frontend/public/demo-qr.png`
-  - `scripts/demo_video_script.md` -> 30s presentation narrative
-
-## Demo Flow (Current `/demo`)
-
-The current live demo UI is focused on:
-
-1. **Attack** phase (red)
-2. **Response** phase (yellow/green transition)
-3. **Solution** phase (green)
-4. **Training handbook** panel shown after solution state
-
-The UI auto-advances on a 30-second timeline and can be reset via **Reset Demo**.
-
-## Troubleshooting
-
-### Frontend cannot reach backend
-
-- Verify backend is running on `http://localhost:8000`
-- Set explicit base URL:
-
 ```bash
-cd frontend
-NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
+pip install -r backend/requirements.txt
+pytest -q backend/tests
 ```
 
-### WebSocket not connecting
+Current backend tests include:
 
-- Confirm backend route `ws://localhost:8000/ws/status`
-- Check proxy/network restrictions in your environment
-- UI should still render using fallback simulation when disconnected
+- Guardian route behavior
+- Risk-scoring paths
+- Socket.IO JWT connect + `alerts:update` emission flow
 
-### ExpressVPN CLI operations fail in backend
+## Deployment
 
-- This can happen outside privileged/container environments
-- Backend falls back to simulated deployment timings/results when real ExpressVPN commands fail
+### Fast EKS update
 
-### Nmap scan issues
-
-- Ensure `nmap` exists (Docker backend image installs it)
-- If scanning fails, backend uses seed fallback findings
-
-### Docker Compose health issues
-
-- Inspect service logs:
+Use:
 
 ```bash
-docker compose logs -f backend frontend postgres redis celery hyperledger
+scripts/deploy_eks_5min.sh
 ```
 
-- Rebuild clean:
+Required env:
 
-```bash
-docker compose down -v
-docker compose up --build
-```
+- `AWS_ACCOUNT_ID`
 
-## Security and Demo Disclaimer
+Optional env:
 
-This repository is a **demo/simulation environment**. It is not a hardened production security platform as-is. Several behaviors intentionally degrade to mock/fallback mode to keep demos resilient in constrained environments.
+- `AWS_REGION`
+- `IMAGE_TAG`
+- `K8S_NAMESPACE`
+- `ECR_REPO_BACKEND`
+- `ECR_REPO_FRONTEND`
 
-## Additional Docs
+### K8s Secrets Template
 
-- Frontend-specific details: `frontend/README.md`
+Use `infra/k8s/guardian-secrets.example.yaml` as the starting point for cluster secrets.
+
+## Security Notes
+
+- Private keys are never stored.
+- Wallet monitoring is consent-based via registered wallet addresses.
+- Sensitive integration credentials are expected from env or Kubernetes secrets.
+- API middleware includes request rate limiting.
+
+## Known Limits
+
+- Some provider features require API keys and may fallback to cache/partial signals without them.
+- Contract analysis currently combines explorer metadata + risk feeds + heuristic checks, not full symbolic execution in cluster by default.
+- Legacy demo tests may reference older UI labels; Guardian tests are separate.

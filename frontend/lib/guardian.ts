@@ -1,4 +1,4 @@
-import { getApiBase, getWsBase } from './backend';
+import { getApiBase } from './backend';
 
 export function getAuthToken(): string {
   if (typeof window === 'undefined') return '';
@@ -34,7 +34,10 @@ export async function guardianFetch<T>(path: string, init?: RequestInit): Promis
   return (await response.json()) as T;
 }
 
-export function getAlertWsUrl(): string {
-  const token = getAuthToken();
-  return `${getWsBase()}/ws/alerts?token=${encodeURIComponent(token)}`;
+export function getSocketIoBase(): string {
+  return getApiBase();
+}
+
+export function getSocketIoAuth(): { token: string } {
+  return { token: getAuthToken() };
 }

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Shield, ShieldAlert } from 'lucide-react';
-import { clearAuthToken, getAlertWsUrl, getAuthToken, guardianFetch, setAuthToken } from '@/lib/guardian';
+import { clearAuthToken, getAuthToken, getSocketIoAuth, getSocketIoBase, guardianFetch, setAuthToken } from '@/lib/guardian';
 
 type AlertItem = {
   id: string;
@@ -13,6 +13,17 @@ type AlertItem = {
   status: string;
   created_at: string;
 };
+
+type SocketLike = {
+  on: (event: string, handler: (payload: AlertItem) => void) => void;
+  disconnect: () => void;
+};
+
+declare global {
+  interface Window {
+    io?: (baseUrl: string, options: { transports: string[]; auth: { token: string } }) => SocketLike;
+  }
+}
 
 const CHAINS = ['ethereum', 'bsc', 'polygon', 'arbitrum', 'optimism', 'avalanche', 'base'];
 
@@ -36,7 +47,7 @@ export default function GuardianPage() {
   const [loading, setLoading] = useState(false);
 
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<SocketLike | null>(null);
 
   useEffect(() => {
     setTokenPresent(Boolean(getAuthToken()));
@@ -44,23 +55,51 @@ export default function GuardianPage() {
 
   const criticalCount = useMemo(() => alerts.filter((a) => a.severity === 'critical' && a.status === 'open').length, [alerts]);
 
+  async function loadAlerts() {
+    try {
+      const rows = await guardianFetch<AlertItem[]>('/guardian/alerts');
+      setAlerts(rows);
+    } catch {
+      return;
+    }
+  }
+
   useEffect(() => {
     if (!tokenPresent) return;
 
-    wsRef.current?.close();
-    const ws = new WebSocket(getAlertWsUrl());
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (Array.isArray(payload)) {
-          setAlerts(payload);
-        }
-      } catch {
-        return;
+    loadAlerts();
+    socketRef.current?.disconnect();
+
+    let script: HTMLScriptElement | null = null;
+
+    const connectSocket = () => {
+      if (typeof window.io !== 'function') return;
+      const socket = window.io(getSocketIoBase(), {
+        transports: ['websocket'],
+        auth: getSocketIoAuth(),
+      });
+      socket.on('alerts:update', (payload: AlertItem) => {
+        setAlerts((current) => [payload, ...current.filter((row) => row.id !== payload.id)].slice(0, 100));
+      });
+      socketRef.current = socket;
+    };
+
+    if (typeof window.io === 'function') {
+      connectSocket();
+    } else {
+      script = document.createElement('script');
+      script.src = `${getSocketIoBase()}/socket.io/socket.io.js`;
+      script.async = true;
+      script.onload = connectSocket;
+      document.body.appendChild(script);
+    }
+
+    return () => {
+      socketRef.current?.disconnect();
+      if (script) {
+        script.remove();
       }
     };
-    wsRef.current = ws;
-    return () => ws.close();
   }, [tokenPresent]);
 
   async function handleAuth(mode: 'login' | 'register', event: FormEvent<HTMLFormElement>) {
@@ -76,6 +115,7 @@ export default function GuardianPage() {
       });
       setAuthToken(response.access_token);
       setTokenPresent(true);
+      await loadAlerts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
@@ -188,7 +228,7 @@ export default function GuardianPage() {
                 onClick={() => {
                   clearAuthToken();
                   setTokenPresent(false);
-                  wsRef.current?.close();
+                  socketRef.current?.disconnect();
                 }}
               >
                 Logout

@@ -14,3 +14,6 @@ httpx==0.28.1
 PyJWT==2.10.1
 passlib[bcrypt]==1.7.4
 boto3==1.37.38
+python-socketio==5.13.0
+pytest==8.3.5
+pytest-asyncio==0.25.3
