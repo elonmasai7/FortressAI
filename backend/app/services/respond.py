@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from app.config import ENABLE_REAL_EXPRESSVPN, EXPRESSVPN_PROFILE
+from app.services.error_utils import log_service_error
 from app.services.metrics import metrics_store
 
 
@@ -50,5 +51,6 @@ def _run(cmd: str) -> bool:
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         return True
-    except Exception:
+    except Exception as exc:
+        log_service_error("respond", "RESPOND_COMMAND_FAILED", exc, command=cmd)
         return False

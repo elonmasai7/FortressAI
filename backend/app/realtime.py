@@ -5,6 +5,7 @@ from urllib.parse import parse_qs
 import socketio
 
 from app.security import decode_token
+from app.services.error_utils import log_service_error
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 _sid_user_map: dict[str, str] = {}
@@ -27,7 +28,8 @@ async def connect(sid, environ, auth):
             return False
         _sid_user_map[sid] = user_id
         return True
-    except Exception:
+    except Exception as exc:
+        log_service_error("realtime", "SOCKETIO_CONNECT_AUTH_FAILED", exc, sid=sid)
         return False
 
 

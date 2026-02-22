@@ -20,6 +20,7 @@ from app.models import (
     WalletProfile,
 )
 from app.services.alerts import create_alert
+from app.services.error_utils import log_service_error
 from app.services.integrations import (
     etherscan_contract_info,
     etherscan_txlist,
@@ -86,7 +87,13 @@ def _ssl_expiry_days(hostname: str) -> int | None:
                 expiry = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
                 now = datetime.now(timezone.utc)
                 return int((expiry - now).total_seconds() // 86400)
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "blockchain_guardian",
+            "GUARDIAN_SSL_EXPIRY_CHECK_FAILED",
+            exc,
+            hostname=hostname,
+        )
         return None
 
 

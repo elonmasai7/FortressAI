@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from app.config import ENABLE_REAL_FABRIC, FABRIC_PEER_ADDRESS
+from app.services.error_utils import log_service_error
 from app.services.metrics import metrics_store
 
 
@@ -33,5 +34,6 @@ def _peer_reachable() -> bool:
     try:
         socket.gethostbyname("hyperledger")
         return True
-    except Exception:
+    except Exception as exc:
+        log_service_error("logging_agent", "LOG_PEER_RESOLVE_FAILED", exc, peer="hyperledger")
         return False

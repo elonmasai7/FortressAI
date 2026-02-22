@@ -47,5 +47,12 @@ class MetricsStore:
                 "agent_logs": list(self._agent_logs),
             }
 
+    def reset(self) -> None:
+        with self._lock:
+            self._agent_logs.clear()
+            self._threats_blocked = 0
+            self._tunnel_active = False
+            self._p99_latency = 3000
+
 
 metrics_store = MetricsStore()

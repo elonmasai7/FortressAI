@@ -13,6 +13,7 @@ from app.config import (
     TWILIO_FROM_NUMBER,
     TWILIO_TO_NUMBER,
 )
+from app.services.error_utils import log_service_error
 from app.services.telegram_helper import get_stored_chat_id
 
 
@@ -78,7 +79,8 @@ def deliver_alert_channels(subject: str, message: str) -> dict:
     ):
         try:
             outcomes[name] = sender()
-        except Exception:
+        except Exception as exc:
+            log_service_error("notifications", f"NOTIFY_{name.upper()}_FAILED", exc)
             outcomes[name] = False
 
     configured = [

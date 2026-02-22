@@ -15,6 +15,7 @@ from app.config import (
     REDIS_CACHE_TTL_SECONDS,
 )
 from app.services.cache import cache_get_json, cache_set_json
+from app.services.error_utils import log_service_error
 
 CHAIN_IDS = {
     "ethereum": "1",
@@ -65,8 +66,14 @@ async def etherscan_txlist(wallet_address: str, chain: str, limit: int = 100) ->
         if isinstance(results, list):
             cache_set_json(cache_key, results)
             return results
-    except Exception:
-        pass
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_ETHERSCAN_TXLIST_FAILED",
+            exc,
+            chain=chain,
+            wallet_address=wallet_address,
+        )
 
     cached = cache_get_json(cache_key)
     return cached if isinstance(cached, list) else []
@@ -90,8 +97,14 @@ async def etherscan_contract_info(contract_address: str, chain: str) -> dict:
             data = result[0]
             cache_set_json(cache_key, data)
             return data
-    except Exception:
-        pass
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_ETHERSCAN_CONTRACT_INFO_FAILED",
+            exc,
+            chain=chain,
+            contract_address=contract_address,
+        )
 
     cached = cache_get_json(cache_key)
     return cached if isinstance(cached, dict) else {}
@@ -107,8 +120,14 @@ async def goplus_address_security(address: str, chain: str) -> dict:
         if isinstance(result, dict):
             cache_set_json(cache_key, result)
             return result
-    except Exception:
-        pass
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_GOPLUS_ADDRESS_SECURITY_FAILED",
+            exc,
+            chain=chain,
+            address=address,
+        )
 
     cached = cache_get_json(cache_key)
     return cached if isinstance(cached, dict) else {}
@@ -126,8 +145,14 @@ async def goplus_token_security(token_address: str, chain: str) -> dict:
             if token:
                 cache_set_json(cache_key, token)
                 return token
-    except Exception:
-        pass
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_GOPLUS_TOKEN_SECURITY_FAILED",
+            exc,
+            chain=chain,
+            token_address=token_address,
+        )
 
     cached = cache_get_json(cache_key)
     return cached if isinstance(cached, dict) else {}
@@ -145,7 +170,13 @@ async def fetch_metamask_phishing_domains() -> set[str]:
         clean = sorted({str(d).lower() for d in domains})
         cache_set_json(cache_key, clean, ttl_seconds=REDIS_CACHE_TTL_SECONDS)
         return set(clean)
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_METAMASK_FEED_FAILED",
+            exc,
+            url=METAMASK_PHISHING_URL,
+        )
         return set()
 
 
@@ -170,7 +201,13 @@ async def fetch_phishtank_domains() -> set[str]:
         clean = sorted(domains)
         cache_set_json(cache_key, clean, ttl_seconds=REDIS_CACHE_TTL_SECONDS)
         return set(clean)
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_PHISHTANK_FEED_FAILED",
+            exc,
+            url=PHISHTANK_FEED_URL,
+        )
         return set()
 
 
@@ -186,13 +223,26 @@ async def push_siem_event(event: dict) -> bool:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.post(url, json=event)
             return response.status_code in (200, 201)
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_SIEM_PUSH_FAILED",
+            exc,
+            ingest_url=ELASTIC_INGEST_URL,
+        )
         return False
 
 
 def usd_value_from_native_wei(value_wei: str, chain: str) -> float:
     try:
         native = int(value_wei) / 10**18
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "integrations",
+            "INTEGRATION_WEI_PARSE_FAILED",
+            exc,
+            chain=chain,
+            value_wei=value_wei,
+        )
         return 0.0
     return native * NATIVE_PRICE_USD.get(chain, 0.0)

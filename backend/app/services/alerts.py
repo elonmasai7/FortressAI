@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AuditLog, SecurityAlert, User
 from app.realtime import emit_alert_to_user
+from app.services.error_utils import log_service_error
 from app.services.integrations import push_siem_event
 from app.services.metrics import metrics_store
 
@@ -74,7 +75,14 @@ async def create_alert(
         from app.tasks import deliver_alert_task
 
         deliver_alert_task.delay(f"FortressAI {severity.upper()} alert", outbound)
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "alerts",
+            "ALERT_NOTIFICATION_QUEUE_FAILED",
+            exc,
+            alert_id=alert.id,
+            severity=severity,
+        )
         # Never block threat processing if notification queue is unavailable.
         pass
 

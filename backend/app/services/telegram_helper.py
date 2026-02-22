@@ -6,6 +6,7 @@ import httpx
 
 from app.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from app.services.cache import redis_client
+from app.services.error_utils import log_service_error
 
 TELEGRAM_CHAT_ID_CACHE_KEY = "fortress:telegram:chat_id"
 
@@ -15,8 +16,8 @@ def get_stored_chat_id() -> str:
         cached = redis_client().get(TELEGRAM_CHAT_ID_CACHE_KEY)
         if cached:
             return str(cached)
-    except Exception:
-        pass
+    except Exception as exc:
+        log_service_error("telegram_helper", "TELEGRAM_CHAT_ID_CACHE_READ_FAILED", exc)
     return TELEGRAM_CHAT_ID
 
 
@@ -26,7 +27,8 @@ def store_chat_id(chat_id: str) -> bool:
     try:
         redis_client().set(TELEGRAM_CHAT_ID_CACHE_KEY, str(chat_id))
         return True
-    except Exception:
+    except Exception as exc:
+        log_service_error("telegram_helper", "TELEGRAM_CHAT_ID_CACHE_WRITE_FAILED", exc, chat_id=chat_id)
         return False
 
 
@@ -43,7 +45,8 @@ async def fetch_recent_updates(limit: int = 50) -> dict:
             response.raise_for_status()
             payload = response.json()
     except Exception as exc:
-        return {"ok": False, "error": str(exc), "updates": [], "chats": []}
+        log_service_error("telegram_helper", "TELEGRAM_UPDATES_FETCH_FAILED", exc, limit=limit)
+        return {"ok": False, "error": str(exc), "error_code": "TELEGRAM_UPDATES_FETCH_FAILED", "updates": [], "chats": []}
 
     updates = payload.get("result", []) if isinstance(payload, dict) else []
     chats_map: OrderedDict[str, dict] = OrderedDict()
@@ -79,6 +82,7 @@ async def discover_and_store_chat_id(preferred_chat_id: str | None = None) -> di
         return {
             "ok": False,
             "error": data.get("error", "Failed to fetch updates"),
+            "error_code": data.get("error_code", "TELEGRAM_DISCOVER_UPDATES_FAILED"),
             "stored_chat_id": get_stored_chat_id(),
             "chats": data.get("chats", []),
         }
@@ -97,6 +101,7 @@ async def discover_and_store_chat_id(preferred_chat_id: str | None = None) -> di
     return {
         "ok": True,
         "error": "",
+        "error_code": "",
         "stored_chat_id": selected if stored else get_stored_chat_id(),
         "chats": chats,
     }

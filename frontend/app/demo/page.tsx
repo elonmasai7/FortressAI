@@ -24,6 +24,9 @@ type BackendStatusPayload = {
   tunnel_active?: boolean;
   kill_switch_on?: boolean;
   hyperledger_tx?: string;
+  threats_per_sec?: number;
+  p99_latency_ms?: number;
+  owasp_detection_pct?: number;
 };
 
 type TunnelApiResponse = {
@@ -229,8 +232,8 @@ export default function DemoPage() {
   }, []);
 
   const syncFromBackend = useCallback((payload: BackendStatusPayload) => {
-    if (typeof payload.traffic_rps === 'number') {
-      const trafficRps = payload.traffic_rps;
+    const trafficRps = typeof payload.traffic_rps === 'number' ? payload.traffic_rps : payload.threats_per_sec;
+    if (typeof trafficRps === 'number') {
       setTrafficData((current) => [
         ...current.slice(1),
         {
@@ -242,7 +245,9 @@ export default function DemoPage() {
       ]);
     }
     if (typeof payload.bert_confidence === 'number') setBertConfidence(payload.bert_confidence);
+    if (typeof payload.owasp_detection_pct === 'number') setBertConfidence(Math.min(1, payload.owasp_detection_pct / 100));
     if (typeof payload.tunnel_latency_ms === 'number') setTunnelLatency(payload.tunnel_latency_ms);
+    if (typeof payload.p99_latency_ms === 'number') setTunnelLatency(payload.p99_latency_ms);
     if (typeof payload.tunnel_active === 'boolean') setTunnelActive(payload.tunnel_active);
     if (typeof payload.kill_switch_on === 'boolean') setKillSwitch(payload.kill_switch_on);
     if (payload.hyperledger_tx) setHyperledgerTx(payload.hyperledger_tx);
@@ -366,12 +371,20 @@ export default function DemoPage() {
   useEffect(() => {
     if (phase.id === 'recon') {
       addTerminalBlock(scenario.reconTerminal);
-      runRestAction('/scan', { method: 'POST' });
+      runRestAction('/scan', {
+        method: 'POST',
+        body: JSON.stringify({ target: 'hkma.gov.hk', ports: '1-10000' }),
+      });
     }
     if (phase.id === 'respond') {
       addTerminalBlock(scenario.respondTerminal);
       setBertConfidence(scenario.bertTarget);
-      runRestAction('/simulate', { method: 'POST' });
+      runRestAction('/simulate', {
+        method: 'POST',
+        body: JSON.stringify({
+          email_text: 'HKMA urgent compliance alert. Verify your account and wire payment immediately.',
+        }),
+      });
       void deployExpressVpn('hk-relay-01.cyberport.hk');
     }
     if (phase.id === 'log') {

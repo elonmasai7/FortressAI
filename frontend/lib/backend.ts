@@ -19,7 +19,19 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   });
 
   if (!response.ok) {
-    throw new Error(`Backend request failed: ${response.status}`);
+    const fallback = `Backend request failed: ${response.status}`;
+    try {
+      const text = await response.text();
+      if (!text) throw new Error(fallback);
+      try {
+        const body = JSON.parse(text) as { error?: { message?: string } };
+        throw new Error(body.error?.message || text || fallback);
+      } catch {
+        throw new Error(text || fallback);
+      }
+    } catch {
+      throw new Error(fallback);
+    }
   }
 
   return (await response.json()) as T;

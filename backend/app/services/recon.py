@@ -5,6 +5,7 @@ from typing import Any
 
 import nmap
 
+from app.services.error_utils import log_service_error
 from app.services.metrics import metrics_store
 
 
@@ -32,7 +33,14 @@ def run_recon(target: str, ports: str) -> dict[str, Any]:
                 )
         if not findings:
             findings = SEED_FALLBACK
-    except Exception:
+    except Exception as exc:
+        log_service_error(
+            "recon",
+            "RECON_SCAN_FAILED",
+            exc,
+            target=target,
+            ports=ports,
+        )
         findings = SEED_FALLBACK
 
     risky = [f for f in findings if f["port"] in {3389, 22, 445}]
@@ -49,5 +57,6 @@ def run_recon(target: str, ports: str) -> dict[str, Any]:
 def _resolve(target: str) -> str:
     try:
         return socket.gethostbyname(target)
-    except Exception:
+    except Exception as exc:
+        log_service_error("recon", "RECON_DNS_RESOLVE_FAILED", exc, target=target)
         return "0.0.0.0"

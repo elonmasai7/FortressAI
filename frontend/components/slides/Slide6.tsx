@@ -59,8 +59,8 @@ export function Slide6({ onDemoComplete }: Slide6Props) {
       const txHash = result.log?.tx_hash ?? '0xabc';
       const responseText = `Respond Agent: ExpressVPN ${respondMode} mode, tunnel in ${respondLatency}ms`;
       setResponseAction(responseText);
-      setSolution(`Solution: Threat isolated, kill switch active, immutable log ${txHash}`);
-      setApiStatus(`Sequence complete: ${result.status}`);
+      setSolution(`Safe dashboard switches to green; threat isolated, kill switch active, immutable log ${txHash}`);
+      setApiStatus('Connected to backend API');
     } catch (_err) {
       try {
         await fetch('/api/scan', { method: 'POST' });
@@ -110,7 +110,7 @@ export function Slide6({ onDemoComplete }: Slide6Props) {
             onClick={runDemo}
             className="mt-5 rounded-lg border border-fortress-green bg-fortress-green/20 px-4 py-2 text-sm font-semibold"
           >
-            Simulate Real Attack
+            Simulate 30s Demo
           </button>
           <p className="mt-4 text-xs text-slate-400">Response action is executed first, then final solution status is shown.</p>
           <p className="mt-1 text-xs text-fortress-gold">{apiStatus}</p>

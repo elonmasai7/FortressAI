@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.database import SessionLocal
 from app.models import SecurityAlert
 from app.security import decode_token
+from app.services.error_utils import log_service_error
 from app.services.metrics import metrics_store
 
 router = APIRouter()
@@ -20,6 +21,9 @@ async def status_ws(ws: WebSocket):
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         return
+    except Exception as exc:
+        log_service_error("ws", "WS_STATUS_STREAM_FAILED", exc)
+        return
 
 
 @router.websocket("/ws/alerts")
@@ -31,7 +35,8 @@ async def alerts_ws(ws: WebSocket):
         if not user_id:
             await ws.close(code=1008)
             return
-    except Exception:
+    except Exception as exc:
+        log_service_error("ws", "WS_ALERTS_AUTH_FAILED", exc)
         await ws.close(code=1008)
         return
 
@@ -61,6 +66,9 @@ async def alerts_ws(ws: WebSocket):
             )
             await asyncio.sleep(2)
     except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        log_service_error("ws", "WS_ALERTS_STREAM_FAILED", exc, user_id=user_id)
         return
     finally:
         db.close()
