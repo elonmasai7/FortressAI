@@ -4,7 +4,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+      - NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-http://localhost:8000}
     depends_on:
       backend:
         condition: service_healthy
@@ -32,6 +32,10 @@ services:
       - FABRIC_PEER_ADDRESS=hyperledger:7051
       - JWT_SECRET_KEY=fortressai-dev-secret
       - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY:-}
+      - ETHERSCAN_BASE_URL=${ETHERSCAN_BASE_URL:-https://api.etherscan.io/v2/api}
+      - GOPLUS_BASE_URL=${GOPLUS_BASE_URL:-https://api.gopluslabs.io}
+      - METAMASK_PHISHING_URL=${METAMASK_PHISHING_URL:-https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main/src/config.json}
+      - PHISHTANK_FEED_URL=${PHISHTANK_FEED_URL:-https://data.phishtank.com/data/online-valid.json}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - ALERT_EMAIL_FROM=${ALERT_EMAIL_FROM:-alerts@fortressai.local}
       - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
@@ -43,6 +47,9 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
       - ELASTIC_INGEST_URL=${ELASTIC_INGEST_URL:-}
+      - AWS_SECURITY_HUB_ENABLED=${AWS_SECURITY_HUB_ENABLED:-false}
+      - AWS_REGION=${AWS_REGION:-ap-east-1}
+      - REDIS_CACHE_TTL_SECONDS=${REDIS_CACHE_TTL_SECONDS:-900}
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -67,6 +74,25 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY:-}
+      - ETHERSCAN_BASE_URL=${ETHERSCAN_BASE_URL:-https://api.etherscan.io/v2/api}
+      - GOPLUS_BASE_URL=${GOPLUS_BASE_URL:-https://api.gopluslabs.io}
+      - METAMASK_PHISHING_URL=${METAMASK_PHISHING_URL:-https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main/src/config.json}
+      - PHISHTANK_FEED_URL=${PHISHTANK_FEED_URL:-https://data.phishtank.com/data/online-valid.json}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - ALERT_EMAIL_FROM=${ALERT_EMAIL_FROM:-alerts@fortressai.local}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_FROM_NUMBER=${TWILIO_FROM_NUMBER:-}
+      - TWILIO_TO_NUMBER=${TWILIO_TO_NUMBER:-}
+      - ELASTIC_INGEST_URL=${ELASTIC_INGEST_URL:-}
+      - AWS_SECURITY_HUB_ENABLED=${AWS_SECURITY_HUB_ENABLED:-false}
+      - AWS_REGION=${AWS_REGION:-ap-east-1}
+      - REDIS_CACHE_TTL_SECONDS=${REDIS_CACHE_TTL_SECONDS:-900}
     depends_on:
       backend:
         condition: service_healthy
