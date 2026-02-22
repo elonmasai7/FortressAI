@@ -193,6 +193,7 @@ Base URL: `http://localhost:8000`
 - `POST /guardian/ingest/siem`
 - `POST /guardian/ingest/ids`
 - `POST /guardian/ingest/firewall`
+- `GET /guardian/startup-check`
 - `GET /guardian/telegram/chat-id`
 - `GET /guardian/telegram/recent-updates`
 - `POST /guardian/telegram/discover-chat-id`

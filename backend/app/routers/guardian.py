@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.config import (
+    AWS_REGION,
+    AWS_SECURITY_HUB_ENABLED,
+    ELASTIC_INGEST_URL,
+    ETHERSCAN_BASE_URL,
+    ETHERSCAN_API_KEY,
+    GOPLUS_BASE_URL,
+    METAMASK_PHISHING_URL,
+    PHISHTANK_FEED_URL,
+)
 from app.database import get_db
 from app.models import User
 from app.schemas import (
@@ -31,6 +43,16 @@ from app.services.blockchain_guardian import (
 from app.services.telegram_helper import discover_and_store_chat_id, fetch_recent_updates, get_stored_chat_id, store_chat_id
 
 router = APIRouter(prefix="/guardian", tags=["guardian"])
+
+
+def _safe_url_preview(url: str) -> str:
+    if not url:
+        return ""
+    parsed = urlsplit(url)
+    if not parsed.scheme or not parsed.netloc:
+        return "<set>"
+    path = parsed.path if parsed.path else "/"
+    return f"{parsed.scheme}://{parsed.netloc}{path}"
 
 
 @router.post("/auth/register", response_model=TokenResponse)
@@ -190,3 +212,25 @@ async def telegram_recent_updates(
     _ = user
     data = await fetch_recent_updates(limit=20)
     return {"ok": data.get("ok", False), "error": data.get("error", ""), "chats": data.get("chats", [])}
+
+
+@router.get("/startup-check")
+def startup_check(
+    user: User = Depends(get_current_user),
+):
+    _ = user
+    checks = {
+        "etherscan_base_url": {"loaded": bool(ETHERSCAN_BASE_URL), "preview": _safe_url_preview(ETHERSCAN_BASE_URL)},
+        "goplus_base_url": {"loaded": bool(GOPLUS_BASE_URL), "preview": _safe_url_preview(GOPLUS_BASE_URL)},
+        "metamask_phishing_url": {
+            "loaded": bool(METAMASK_PHISHING_URL),
+            "preview": _safe_url_preview(METAMASK_PHISHING_URL),
+        },
+        "phishtank_feed_url": {"loaded": bool(PHISHTANK_FEED_URL), "preview": _safe_url_preview(PHISHTANK_FEED_URL)},
+        "elastic_ingest_url": {"loaded": bool(ELASTIC_INGEST_URL), "preview": _safe_url_preview(ELASTIC_INGEST_URL)},
+        "aws_region": {"loaded": bool(AWS_REGION), "preview": AWS_REGION},
+        "aws_security_hub_enabled": {"loaded": True, "preview": str(AWS_SECURITY_HUB_ENABLED).lower()},
+        "etherscan_api_key": {"loaded": bool(ETHERSCAN_API_KEY), "preview": "<redacted>"},
+    }
+    loaded_count = sum(1 for row in checks.values() if row["loaded"])
+    return {"checks": checks, "summary": {"loaded": loaded_count, "total": len(checks)}}
