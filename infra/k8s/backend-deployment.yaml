@@ -23,6 +23,22 @@ spec:
               value: redis://redis:6379/0
             - name: DATABASE_URL
               value: postgresql+psycopg://fortress:fortress@postgres:5432/fortressai
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: JWT_SECRET_KEY
+            - name: ETHERSCAN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: ETHERSCAN_API_KEY
+            - name: ELASTIC_INGEST_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fortressai-secrets
+                  key: ELASTIC_INGEST_URL
+                  optional: true
 ---
 apiVersion: v1
 kind: Service

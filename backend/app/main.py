@@ -5,7 +5,9 @@ import io
 import qrcode
 
 from app.database import init_db
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.routers.api import router as api_router
+from app.routers.guardian import router as guardian_router
 from app.ws.socket import router as ws_router
 
 app = FastAPI(title="FortressAI API", version="1.0.0")
@@ -17,6 +19,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware, max_requests=180, window_seconds=60)
 
 
 @app.on_event("startup")
@@ -39,4 +42,5 @@ def qr():
 
 
 app.include_router(api_router)
+app.include_router(guardian_router)
 app.include_router(ws_router)

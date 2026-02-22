@@ -18,3 +18,55 @@ class LogRequest(BaseModel):
     threat_id: str
     compliance: str = Field(default="HKMA_2026")
     payload: str = Field(default="")
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8)
+    region: str = Field(default="HK")
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class WalletMonitorRequest(BaseModel):
+    wallet_address: str
+    chain: str = Field(default="ethereum")
+    threshold_usd: float = Field(default=1000.0)
+    label: str = Field(default="")
+
+
+class ApprovalScanRequest(BaseModel):
+    wallet_address: str
+    chain: str = Field(default="ethereum")
+
+
+class ContractAnalyzeRequest(BaseModel):
+    contract_address: str
+    chain: str = Field(default="ethereum")
+
+
+class PhishingCheckRequest(BaseModel):
+    url: str
+
+
+class AlertActionRequest(BaseModel):
+    status: str = Field(default="acknowledged")
+
+
+class IngestEvent(BaseModel):
+    source: str
+    severity: str = Field(default="medium")
+    message: str
+    metadata: dict = Field(default_factory=dict)
+
+
+class IngestRequest(BaseModel):
+    events: list[IngestEvent] = Field(default_factory=list)

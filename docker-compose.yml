@@ -30,6 +30,13 @@ services:
       - ENABLE_REAL_FABRIC=true
       - EXPRESSVPN_PROFILE=hk
       - FABRIC_PEER_ADDRESS=hyperledger:7051
+      - JWT_SECRET_KEY=fortressai-dev-secret
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY:-}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - ELASTIC_INGEST_URL=${ELASTIC_INGEST_URL:-}
     cap_add:
       - NET_ADMIN
     sysctls:

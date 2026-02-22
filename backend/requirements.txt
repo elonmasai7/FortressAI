@@ -10,3 +10,7 @@ websockets==15.0.1
 python-dotenv==1.1.1
 python-nmap==0.7.1
 qrcode[pil]==8.2
+httpx==0.28.1
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
+boto3==1.37.38

@@ -10,6 +10,7 @@ The primary demo experience is:
 
 - `/` -> multi-slide Fortress deck
 - `/demo` -> focused live simulation (Attack -> Response -> Solution -> Training handbook)
+- `/guardian` -> blockchain wallet security operations dashboard (JWT-protected)
 
 ## What is FortressAI?
 
@@ -198,6 +199,57 @@ If running backend outside Docker, set environment variables (notably `DATABASE_
 ## API Reference (Backend)
 
 Base URL: `http://localhost:8000`
+
+## FortressAI Guardian (Blockchain Security Extension)
+
+New backend endpoints under `/guardian`:
+
+- `POST /guardian/auth/register`
+- `POST /guardian/auth/login`
+- `POST /guardian/monitor-wallet`
+- `POST /guardian/scan-approvals`
+- `POST /guardian/analyze-contract`
+- `POST /guardian/check-phishing`
+- `GET /guardian/alerts`
+- `POST /guardian/alerts/{alert_id}/action`
+- `POST /guardian/ingest/siem`
+- `POST /guardian/ingest/ids`
+- `POST /guardian/ingest/firewall`
+
+New websocket stream:
+
+- `WS /ws/alerts?token=<jwt>`
+
+Supported chains in monitoring/scanning:
+
+- Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Avalanche, Base
+
+Primary live integrations:
+
+- Etherscan v2 API (tx history, contract verification metadata)
+- GoPlus Security API (address/token risk signals)
+- MetaMask `eth-phishing-detect` feed (blacklist)
+- PhishTank feed (phishing domain checks)
+- ELK-compatible ingest hook via `ELASTIC_INGEST_URL` (optional)
+
+### Guardian Environment Variables
+
+Set these in `.env` or compose environment:
+
+- `JWT_SECRET_KEY`
+- `ETHERSCAN_API_KEY`
+- `ELASTIC_INGEST_URL` (optional)
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` (optional)
+- `DISCORD_WEBHOOK_URL` (optional)
+- `REDIS_CACHE_TTL_SECONDS` (optional)
+
+### 5-Minute EKS Deploy Script
+
+Use `scripts/deploy_eks_5min.sh` for a fast image build/push and rolling deployment update.
+Required vars:
+
+- `AWS_ACCOUNT_ID`
+- optional: `AWS_REGION`, `IMAGE_TAG`, `K8S_NAMESPACE`, `ECR_REPO_BACKEND`, `ECR_REPO_FRONTEND`
 
 ### `POST /scan`
 
