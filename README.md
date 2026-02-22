@@ -217,11 +217,24 @@ pip install -r backend/requirements.txt
 pytest -q backend/tests
 ```
 
+Run unit-focused tests only:
+
+```bash
+pytest -q backend/tests -m "not integration"
+```
+
+Run integration tests only:
+
+```bash
+pytest -q backend/tests -m integration
+```
+
 Current backend tests include:
 
 - Guardian route behavior
 - Risk-scoring paths
 - Socket.IO JWT connect + `alerts:update` emission flow
+- Network-level Socket.IO `AsyncClient` integration test against live Uvicorn app
 
 ## Deployment
 
