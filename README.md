@@ -102,6 +102,18 @@ tasks (Celery)
 
 ## Quick Start
 
+### Config File Locations
+
+- GitHub-safe template: `.env.example`
+- Local secrets file (git-ignored): `.env`
+- Kubernetes secret template: `infra/k8s/guardian-secrets.example.yaml`
+
+Create local env from template:
+
+```bash
+cp .env.example .env
+```
+
 ### 1) Run full stack with Docker Compose
 
 ```bash
