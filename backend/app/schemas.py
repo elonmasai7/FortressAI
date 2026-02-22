@@ -31,9 +31,17 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    region: str
+    created_at: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: UserProfileResponse
 
 
 class WalletMonitorRequest(BaseModel):

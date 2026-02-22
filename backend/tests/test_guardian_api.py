@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -13,7 +14,12 @@ class DummyDB:
 
 def _override_dependencies():
     db = DummyDB()
-    user = SimpleNamespace(id="user-1", email="user@example.com")
+    user = SimpleNamespace(
+        id="user-1",
+        email="user@example.com",
+        region="HK",
+        created_at=datetime.now(timezone.utc),
+    )
     fastapi_app.dependency_overrides[get_db] = lambda: db
     fastapi_app.dependency_overrides[get_current_user] = lambda: user
     return db, user
@@ -70,3 +76,15 @@ def test_ingest_ids_endpoint(monkeypatch):
     assert body["source"] == "suricata"
     assert body["events_received"] == 1
 
+
+def test_auth_me_endpoint_returns_user_profile():
+    _, user = _override_dependencies()
+
+    client = TestClient(fastapi_app)
+    response = client.get("/guardian/auth/me")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == user.id
+    assert body["email"] == user.email
+    assert body["region"] == user.region

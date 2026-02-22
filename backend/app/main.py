@@ -5,7 +5,8 @@ import io
 import qrcode
 import socketio
 
-from app.database import init_db
+from app.bootstrap import seed_default_users
+from app.database import SessionLocal, init_db
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.realtime import sio
 from app.routers.api import router as api_router
@@ -27,6 +28,11 @@ fastapi_app.add_middleware(RateLimitMiddleware, max_requests=180, window_seconds
 @fastapi_app.on_event("startup")
 def startup() -> None:
     init_db()
+    db = SessionLocal()
+    try:
+        seed_default_users(db)
+    finally:
+        db.close()
 
 
 @fastapi_app.get("/")

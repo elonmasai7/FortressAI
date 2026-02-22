@@ -28,6 +28,7 @@ from app.schemas import (
     TelegramDiscoverRequest,
     TelegramStoreRequest,
     TokenResponse,
+    UserProfileResponse,
     WalletMonitorRequest,
 )
 from app.security import create_access_token, get_current_user, hash_password, verify_password
@@ -55,29 +56,46 @@ def _safe_url_preview(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}{path}"
 
 
+def _user_response(user: User) -> UserProfileResponse:
+    return UserProfileResponse(
+        id=user.id,
+        email=user.email,
+        region=user.region,
+        created_at=user.created_at.isoformat(),
+    )
+
+
 @router.post("/auth/register", response_model=TokenResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == req.email.lower()).first()
+    email = req.email.strip().lower()
+    region = req.region.strip().upper()
+
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already exists")
 
-    user = User(email=req.email.lower(), password_hash=hash_password(req.password), region=req.region)
+    user = User(email=email, password_hash=hash_password(req.password), region=region or "HK")
     db.add(user)
     db.commit()
     db.refresh(user)
 
     token = create_access_token(user.id, user.email)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, user=_user_response(user))
 
 
 @router.post("/auth/login", response_model=TokenResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == req.email.lower()).first()
+    user = db.query(User).filter(User.email == req.email.strip().lower()).first()
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token(user.id, user.email)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, user=_user_response(user))
+
+
+@router.get("/auth/me", response_model=UserProfileResponse)
+def auth_me(user: User = Depends(get_current_user)):
+    return _user_response(user)
 
 
 @router.post("/monitor-wallet")

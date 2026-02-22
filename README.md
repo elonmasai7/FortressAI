@@ -133,6 +133,13 @@ Services:
 - Demo: `http://localhost:3000/demo`
 - Guardian: `http://localhost:3000/guardian`
 
+### Seeded Guardian Users
+
+On backend startup, FortressAI seeds two default Guardian users if they do not already exist:
+
+- `demo.hk@fortressai.local` / `Fortress123!` (region `HK`)
+- `demo.ke@fortressai.local` / `Fortress123!` (region `KE`)
+
 ## Environment Variables
 
 ### Core
@@ -184,6 +191,7 @@ Base URL: `http://localhost:8000`
 
 - `POST /guardian/auth/register`
 - `POST /guardian/auth/login`
+- `GET /guardian/auth/me`
 - `POST /guardian/monitor-wallet`
 - `POST /guardian/scan-approvals`
 - `POST /guardian/analyze-contract`

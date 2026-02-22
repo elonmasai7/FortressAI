@@ -14,6 +14,13 @@ type AlertItem = {
   created_at: string;
 };
 
+type UserProfile = {
+  id: string;
+  email: string;
+  region: string;
+  created_at: string;
+};
+
 type SocketLike = {
   on: (event: string, handler: (payload: AlertItem) => void) => void;
   disconnect: () => void;
@@ -32,6 +39,7 @@ export default function GuardianPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [region, setRegion] = useState('HK');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [wallet, setWallet] = useState('');
   const [walletChain, setWalletChain] = useState('ethereum');
@@ -64,10 +72,20 @@ export default function GuardianPage() {
     }
   }
 
+  async function loadCurrentUser() {
+    try {
+      const user = await guardianFetch<UserProfile>('/guardian/auth/me');
+      setCurrentUser(user);
+    } catch {
+      setCurrentUser(null);
+    }
+  }
+
   useEffect(() => {
     if (!tokenPresent) return;
 
     loadAlerts();
+    loadCurrentUser();
     socketRef.current?.disconnect();
 
     let script: HTMLScriptElement | null = null;
@@ -109,12 +127,18 @@ export default function GuardianPage() {
     try {
       const path = mode === 'login' ? '/guardian/auth/login' : '/guardian/auth/register';
       const payload = mode === 'login' ? { email, password } : { email, password, region };
-      const response = await guardianFetch<{ access_token: string }>(path, {
+      const response = await guardianFetch<{ access_token: string; user?: UserProfile }>(path, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
       setAuthToken(response.access_token);
+      if (response.user) {
+        setCurrentUser(response.user);
+      }
       setTokenPresent(true);
+      if (!response.user) {
+        await loadCurrentUser();
+      }
       await loadAlerts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -228,6 +252,7 @@ export default function GuardianPage() {
                 onClick={() => {
                   clearAuthToken();
                   setTokenPresent(false);
+                  setCurrentUser(null);
                   socketRef.current?.disconnect();
                 }}
               >
@@ -236,6 +261,11 @@ export default function GuardianPage() {
             ) : null}
           </div>
         </div>
+        {tokenPresent && currentUser ? (
+          <p className="mb-4 text-sm text-slate-300">
+            Signed in as {currentUser.email} ({currentUser.region})
+          </p>
+        ) : null}
 
         {!tokenPresent ? (
           <section className="grid gap-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4 md:grid-cols-2">
