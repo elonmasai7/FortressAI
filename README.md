@@ -107,6 +107,7 @@ tasks (Celery)
 - GitHub-safe template: `.env.example`
 - Local secrets file (git-ignored): `.env`
 - Kubernetes secret template: `infra/k8s/guardian-secrets.example.yaml`
+- Real local `.env` path in this workspace: `/workspaces/FortressAI/.env`
 
 Create local env from template:
 
