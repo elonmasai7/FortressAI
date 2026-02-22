@@ -70,3 +70,11 @@ class IngestEvent(BaseModel):
 
 class IngestRequest(BaseModel):
     events: list[IngestEvent] = Field(default_factory=list)
+
+
+class TelegramDiscoverRequest(BaseModel):
+    preferred_chat_id: str | None = None
+
+
+class TelegramStoreRequest(BaseModel):
+    chat_id: str

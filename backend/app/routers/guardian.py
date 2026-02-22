@@ -13,6 +13,8 @@ from app.schemas import (
     LoginRequest,
     PhishingCheckRequest,
     RegisterRequest,
+    TelegramDiscoverRequest,
+    TelegramStoreRequest,
     TokenResponse,
     WalletMonitorRequest,
 )
@@ -26,6 +28,7 @@ from app.services.blockchain_guardian import (
     scan_approvals,
     update_alert_status,
 )
+from app.services.telegram_helper import discover_and_store_chat_id, fetch_recent_updates, get_stored_chat_id, store_chat_id
 
 router = APIRouter(prefix="/guardian", tags=["guardian"])
 
@@ -151,3 +154,39 @@ async def ingest_firewall(
     user: User = Depends(get_current_user),
 ):
     return await ingest_security_events(db, user, "firewall", [event.model_dump() for event in req.events])
+
+
+@router.get("/telegram/chat-id")
+async def telegram_chat_id(user: User = Depends(get_current_user)):
+    _ = user
+    return {"chat_id": get_stored_chat_id()}
+
+
+@router.post("/telegram/discover-chat-id")
+async def telegram_discover_chat_id(
+    req: TelegramDiscoverRequest,
+    user: User = Depends(get_current_user),
+):
+    _ = user
+    return await discover_and_store_chat_id(req.preferred_chat_id)
+
+
+@router.post("/telegram/store-chat-id")
+async def telegram_store_chat_id(
+    req: TelegramStoreRequest,
+    user: User = Depends(get_current_user),
+):
+    _ = user
+    ok = store_chat_id(req.chat_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to store chat_id")
+    return {"chat_id": get_stored_chat_id(), "stored": True}
+
+
+@router.get("/telegram/recent-updates")
+async def telegram_recent_updates(
+    user: User = Depends(get_current_user),
+):
+    _ = user
+    data = await fetch_recent_updates(limit=20)
+    return {"ok": data.get("ok", False), "error": data.get("error", ""), "chats": data.get("chats", [])}

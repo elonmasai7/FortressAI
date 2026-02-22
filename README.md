@@ -180,6 +180,10 @@ Base URL: `http://localhost:8000`
 - `POST /guardian/ingest/siem`
 - `POST /guardian/ingest/ids`
 - `POST /guardian/ingest/firewall`
+- `GET /guardian/telegram/chat-id`
+- `GET /guardian/telegram/recent-updates`
+- `POST /guardian/telegram/discover-chat-id`
+- `POST /guardian/telegram/store-chat-id`
 
 ### Realtime
 
@@ -227,6 +231,20 @@ Run integration tests only:
 
 ```bash
 pytest -q backend/tests -m integration
+```
+
+### Telegram Chat ID Helper
+
+Discover chat IDs from recent updates and persist one to `.env`:
+
+```bash
+python scripts/telegram_chat_id_helper.py --save-env
+```
+
+Choose a specific chat ID instead of latest:
+
+```bash
+python scripts/telegram_chat_id_helper.py --choose <chat_id> --save-env
 ```
 
 Current backend tests include:
