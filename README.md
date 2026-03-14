@@ -3,7 +3,7 @@
 FortressAI is a full-stack cybersecurity platform with two operating modes in one repo:
 
 - Demo mode: original attack-response-log simulation flow for presentations
-- Demo link: https://fortress-ai-delta.vercel.app/
+- Demo link: [https://fortress-ai-delta.vercel.app/](https://frontend-livid-eight-40.vercel.app/demo)
 - Guardian mode: production-oriented blockchain wallet security for individuals and SMEs
 
 The Guardian extension is focused on wallet drain prevention, phishing detection, risky approvals, malicious contract analysis, and real-time alerting.
